@@ -43,18 +43,17 @@ new_release:
 build:
 	python3 setup.py bdist
 
+package:
+	python3 setup.py sdist
+	rm -rf PEAKachu.egg-info
+	ls dist/*
+
 # test:
 # 	python3 tests/test_all.py
 
 # coverage:
 # 	python3-coverage run tests/test_all.py
 # 	python3-coverage report
-
-# package:
-# 	python3 setup.py sdist
-# 	rm -rf PEAKachu.egg-info
-# 	ls dist/*
-
 
 # package_to_pypi:
 # 	python3 setup.py sdist upload
