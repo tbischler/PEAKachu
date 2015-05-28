@@ -1,6 +1,12 @@
 # PEAKachu
 Peak calling tool for CLIP-seq data
 
+## Installation
+
+$ make readme_rst
+$ make package
+$ pip3 install --user dist/PEAKachu-0.1.dev0.tar.gz
+
 ## License
 
 [ICSL](https://en.wikipedia.org/wiki/ISC_license)
