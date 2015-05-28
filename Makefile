@@ -70,6 +70,3 @@ package:
 # show_html_docs:
 # 	firefox docs/build/html/index.html &
 
-# readme_txt:
-# 	pandoc --from=markdown --to=plain README.md -o README.txt
-
