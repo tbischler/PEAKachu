@@ -2,7 +2,7 @@
 # PYTHONPATH.
 link_lib:
 	cd bin && ln -sf ../peakachulib && cd ..
-	cd test && ln -sf ../peakachulib && cd ..
+	cd tests && ln -sf ../peakachulib && cd ..
 
 readme_html:
 	pandoc --from=markdown --to=html README.md -o README.html
