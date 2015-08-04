@@ -19,3 +19,4 @@ class WiggleWriter(object):
 
     def close_file(self):
         self._fh.close()
+        

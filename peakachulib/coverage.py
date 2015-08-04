@@ -1,6 +1,7 @@
 import pysam
 import numpy as np
 
+
 class Coverage(object):
 
     def __init__(self, paired_end, max_insert_size):
@@ -52,9 +53,9 @@ class Coverage(object):
             return
         try:
             mate = self._read2_dict[aligned_read.query_name.split()[0]]
-            #print("Mate found: %s" % mate)
-        except KeyError: 
-            # Invalid mate (usually post-filtered) 
+            # print("Mate found: %s" % mate)
+        except KeyError:
+            # Invalid mate (usually post-filtered)
             print("Mate not found for read %s" % aligned_read)
             return
         if not mate.is_read2:
