@@ -319,17 +319,17 @@ class WindowApproach(object):
                     "subfeature_type" in feature) else None,
                 "feature_product": feature["product"],
                 "overlap_length": overlap})
-            if not overlapping_features:
-                overlapping_features.append({
-                    "feature_type": "intergenic",
-                    "feature_start": None,
-                    "feature_end": None,
-                    "feature_strand": None,
-                    "feature_locus_tag": None,
-                    "feature_name": None,
-                    "subfeature_type": None,
-                    "feature_product": None,
-                    "overlap_length": None})
+        if not overlapping_features:
+            overlapping_features.append({
+                "feature_type": "intergenic",
+                "feature_start": None,
+                "feature_end": None,
+                "feature_strand": None,
+                "feature_locus_tag": None,
+                "feature_name": None,
+                "subfeature_type": None,
+                "feature_product": None,
+                "overlap_length": None})
         return overlapping_features
 
     def generate_normalized_wiggle_files(self):
@@ -362,9 +362,9 @@ class WindowApproach(object):
         wiggle_writers = dict([(strand, WiggleWriter(
             "%s_%s" % (lib.lib_name,
                        strand),
-            open("%s/%s_div_by_%s_%s.wig" % (
-                wiggle_folder, lib.lib_name, size_factor, strand), "w")))
-                for strand in strand_dict.values()])
+            open("%s/%s_div_by_%s_%s.wig" % (wiggle_folder, lib.lib_name,
+                                             size_factor, strand), "w")))
+            for strand in strand_dict.values()])
         for replicon in self._replicon_dict:
             for strand in strand_dict.keys():
                 if strand == "-":
