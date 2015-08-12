@@ -163,40 +163,40 @@ class PredefinedPeakApproach(object):
             cluster_replicon]["peak_df"].append(peak_df, ignore_index=True)
             
     def _split_cluster_peaks(self, block_df, cluster_expr, peak_df):
-            if block_df.empty:
-                return peak_df
-            max_block_ix = block_df["blockExpression"].idxmax()
-            max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
+        if block_df.empty:
+            return peak_df
+        max_block_ix = block_df["blockExpression"].idxmax()
+        max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
 
-            if max_block_expr/cluster_expr < 0.01:
-                return peak_df
-            min_overlap = round(
-                (block_df.loc[max_block_ix, "blockEnd"] -
-                 block_df.loc[max_block_ix, "blockStart"]) * 0.5)
-            min_perc_of_max_block = 0.1
-            
-            overlaps = (block_df.loc[:, "blockEnd"].apply(
-                min, args=(block_df.loc[
-                    max_block_ix, "blockEnd"],)) - block_df.loc[
-                        :, "blockStart"].apply(
-                            max, args=(block_df.loc[
-                                max_block_ix, "blockStart"],))).apply(
-                                    max, args=(0,))
-            peak_blocks = block_df.loc[overlaps >= min_overlap, :]
-            
-            next_block_df = block_df.loc[overlaps == 0, :].reset_index(
-                drop=True)
-            
-            peak_blocks = peak_blocks.loc[
-                (peak_blocks["blockExpression"] /
-                 max_block_expr) >= min_perc_of_max_block, :]
-            
-            peak_start = peak_blocks["blockStart"].min() + 1
-            peak_end = peak_blocks["blockEnd"].max()
-            peak_df = peak_df.append(pd.Series([peak_start, peak_end], index=[
-                "peak_start", "peak_end"]), ignore_index=True)
-            return self._split_cluster_peaks(
-                next_block_df, cluster_expr, peak_df)
+        if max_block_expr/cluster_expr < 0.01:
+            return peak_df
+        min_overlap = round(
+            (block_df.loc[max_block_ix, "blockEnd"] -
+                block_df.loc[max_block_ix, "blockStart"]) * 0.5)
+        min_perc_of_max_block = 0.1
+        
+        overlaps = (block_df.loc[:, "blockEnd"].apply(
+            min, args=(block_df.loc[
+                max_block_ix, "blockEnd"],)) - block_df.loc[
+                    :, "blockStart"].apply(
+                        max, args=(block_df.loc[
+                            max_block_ix, "blockStart"],))).apply(
+                                max, args=(0,))
+        peak_blocks = block_df.loc[overlaps >= min_overlap, :]
+        
+        next_block_df = block_df.loc[overlaps == 0, :].reset_index(
+            drop=True)
+        
+        peak_blocks = peak_blocks.loc[
+            (peak_blocks["blockExpression"] /
+                max_block_expr) >= min_perc_of_max_block, :]
+        
+        peak_start = peak_blocks["blockStart"].min() + 1
+        peak_end = peak_blocks["blockEnd"].max()
+        peak_df = peak_df.append(pd.Series([peak_start, peak_end], index=[
+            "peak_start", "peak_end"]), ignore_index=True)
+        return self._split_cluster_peaks(
+            next_block_df, cluster_expr, peak_df)
         
     def calculate_peak_expression(self):
         for lib in self._lib_dict.values():
