@@ -118,6 +118,9 @@ class PredefinedPeakApproach(object):
         if not p.returncode == 0:
             print(err)
             sys.exit(1)
+        with open("%s/blockbuster.txt" % (self._output_folder),
+                  'w') as blockbuster_fh:
+            blockbuster_fh.write(self._blockbuster_output)
         
     def generate_peaks_from_blockbuster(self):
         for replicon in self._replicon_dict:
@@ -167,7 +170,7 @@ class PredefinedPeakApproach(object):
             return peak_df
         max_block_ix = block_df["blockExpression"].idxmax()
         max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
-
+        
         if max_block_expr/cluster_expr < 0.01:
             return peak_df
         min_overlap = round(
@@ -182,6 +185,7 @@ class PredefinedPeakApproach(object):
                         max, args=(block_df.loc[
                             max_block_ix, "blockStart"],))).apply(
                                 max, args=(0,))
+                            
         peak_blocks = block_df.loc[overlaps >= min_overlap, :]
         
         next_block_df = block_df.loc[overlaps == 0, :].reset_index(
@@ -251,6 +255,21 @@ class PredefinedPeakApproach(object):
         self._peak_df = pd.concat([self._peak_df, result_df], axis=1)
         self._plot_initial_peaks(self._peak_df.baseMean, np.power(
             2.0, self._peak_df.log2FoldChange))
+        # write initial peaks
+        peak_columns = (["replicon"
+                         "peak_start",
+                         "peak_end",
+                         "peak_strand"] +
+                        [lib_name for lib_name in self._lib_dict] +
+                        ["baseMean",
+                         "log2FoldChange",
+                         "lfcSE",
+                         "stat",
+                         "pvalue",
+                         "padj"])
+        self._peak_df.loc[:, peak_columns].to_csv(
+                "%s/initial_peaks.csv" % (self._output_folder),
+                sep='\t', index=False, encoding='utf-8')
         # filter windows
         print("* Filtering windows...", flush=True)
         self._peak_df = self._filter_peaks(self._peak_df)
