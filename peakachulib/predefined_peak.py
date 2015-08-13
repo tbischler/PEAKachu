@@ -256,7 +256,7 @@ class PredefinedPeakApproach(object):
         self._plot_initial_peaks(self._peak_df.baseMean, np.power(
             2.0, self._peak_df.log2FoldChange))
         # write initial peaks
-        peak_columns = (["replicon"
+        peak_columns = (["replicon",
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
