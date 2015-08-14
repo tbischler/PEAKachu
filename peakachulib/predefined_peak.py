@@ -58,13 +58,15 @@ class PredefinedPeakApproach(object):
     def generate_combined_bed_file(self):
         # execute read conversion in parallel
         print("** Converting reads to bed format for %s libraries..." % len(
-            self._lib_dict), flush=True)
+            self._exp_lib_list), flush=True)
+        exp_lib_dict = {lib_name: self._lib_dict[lib_name] for lib_name in
+                        self._exp_lib_list}
         t_start = time()
         with futures.ProcessPoolExecutor(
                 max_workers=self._max_proc) as executor:
             future_to_lib_name = {
                 executor.submit(lib.merge_reads):
-                lib.lib_name for lib in self._lib_dict.values()}
+                lib.lib_name for lib in exp_lib_dict.values()}
         for future in futures.as_completed(future_to_lib_name):
             lib_name = future_to_lib_name[future]
             try:
@@ -75,7 +77,7 @@ class PredefinedPeakApproach(object):
         output_df = pd.DataFrame()
         for replicon in sorted(self._replicon_dict):
             self._replicon_dict[replicon]["reads"] = pd.Series()
-            for lib_name, lib in self._lib_dict.items():
+            for lib_name, lib in exp_lib_dict.items():
                 self._replicon_dict[replicon]["reads"] = self._replicon_dict[
                     replicon]["reads"].add(lib.replicon_dict[replicon][
                         "reads"], fill_value=0)
