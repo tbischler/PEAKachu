@@ -23,10 +23,12 @@ class RunDESeq2(object):
         design = robjects.r("design <- ~ conditions")
         dds = robjects.r.DESeqDataSetFromMatrix(countData=self._count_df,
                                                 colData=colData, design=design)
-        dds = robjects.r.DESeq(dds)
+        dds = robjects.r.DESeq(dds, minReplicatesForReplace=np.inf)
         size_factors = pd.Series(robjects.r.sizeFactors(dds),
                                  index=self._count_df.columns)
-        results = robjects.r.results(dds, contrast=robjects.StrVector(
+        results = robjects.r.results(dds, cooksCutoff=False,
+                                     independentFiltering=False,
+                                     contrast=robjects.StrVector(
             ("conditions", "exp", "ctr")))
         results_df = robjects.pandas2ri.ri2py_dataframe(robjects.r[
             'as.data.frame'](results))
