@@ -272,12 +272,12 @@ class PredefinedPeakApproach(object):
         self._peak_df.loc[:, peak_columns].to_csv(
                 "%s/initial_peaks.csv" % (self._output_folder),
                 sep='\t', index=False, encoding='utf-8')
-        # filter windows
-        print("* Filtering windows...", flush=True)
+        # filter peaks
+        print("* Filtering peaks...", flush=True)
         self._peak_df = self._filter_peaks(self._peak_df)
     
     def _filter_peaks(self, df):
-        print("Removing windows based on minimum fold change "
+        print("Removing peaks based on minimum fold change "
               "from DataFrame with %s rows..." % len(df), flush=True)
         t_start = time()
         log2_fc_cutoff = np.log2(self._fc_cutoff)
@@ -285,7 +285,7 @@ class PredefinedPeakApproach(object):
         t_end = time()
         print("Removal took %s seconds. DataFrame contains now %s rows." % (
             (t_end-t_start), len(df)), flush=True)
-        print("Removing windows based on padj from DataFrame with %s rows..."
+        print("Removing peaks based on padj from DataFrame with %s rows..."
               % len(df), flush=True)
         t_start = time()
         df = df.query('padj < @self._padj_threshold')
