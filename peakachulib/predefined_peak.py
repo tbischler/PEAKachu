@@ -172,34 +172,31 @@ class PredefinedPeakApproach(object):
             return peak_df
         max_block_ix = block_df["blockExpression"].idxmax()
         max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
-        
         if max_block_expr/cluster_expr < 0.01:
             return peak_df
         min_overlap = round(
             (block_df.loc[max_block_ix, "blockEnd"] -
                 block_df.loc[max_block_ix, "blockStart"]) * 0.5)
         min_perc_of_max_block = 0.1
-        
-        overlaps = (block_df.loc[:, "blockEnd"].apply(
+        overlaps_with_max_block = (block_df.loc[:, "blockEnd"].apply(
             min, args=(block_df.loc[
                 max_block_ix, "blockEnd"],)) - block_df.loc[
                     :, "blockStart"].apply(
                         max, args=(block_df.loc[
                             max_block_ix, "blockStart"],))).apply(
                                 max, args=(0,))
-                            
-        peak_blocks = block_df.loc[overlaps >= min_overlap, :]
-        
-        next_block_df = block_df.loc[overlaps == 0, :].reset_index(
-            drop=True)
-        
+        peak_blocks = block_df.loc[overlaps_with_max_block >= min_overlap, :]
         peak_blocks = peak_blocks.loc[
             (peak_blocks["blockExpression"] /
                 max_block_expr) >= min_perc_of_max_block, :]
-        
-        peak_start = peak_blocks["blockStart"].min() + 1
+        peak_start = peak_blocks["blockStart"].min()
         peak_end = peak_blocks["blockEnd"].max()
-        peak_df = peak_df.append(pd.Series([peak_start, peak_end], index=[
+        overlaps_with_peak = (block_df.loc[:, "blockEnd"].apply(min, args=(
+            peak_end,)) - block_df.loc[:, "blockStart"].apply(max, args=(
+                peak_start,))).apply(max, args=(0,))
+        next_block_df = block_df.loc[overlaps_with_peak == 0, :].reset_index(
+            drop=True)
+        peak_df = peak_df.append(pd.Series([peak_start + 1, peak_end], index=[
             "peak_start", "peak_end"]), ignore_index=True)
         return self._split_cluster_peaks(
             next_block_df, cluster_expr, peak_df)
@@ -270,8 +267,8 @@ class PredefinedPeakApproach(object):
                          "pvalue",
                          "padj"])
         self._peak_df.loc[:, peak_columns].to_csv(
-                "%s/initial_peaks.csv" % (self._output_folder),
-                sep='\t', index=False, encoding='utf-8')
+            "%s/initial_peaks.csv" % (self._output_folder),
+            sep='\t', index=False, encoding='utf-8')
         # filter peaks
         print("* Filtering peaks...", flush=True)
         self._peak_df = self._filter_peaks(self._peak_df)
