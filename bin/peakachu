@@ -4,6 +4,7 @@
 
 import sys
 import argparse
+from peakachulib.float_range import FloatRange
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
 from peakachulib.predefined_peak import PredefinedPeakApproach
@@ -30,9 +31,9 @@ def main():
     window_parser.add_argument('-t', "--exp_libs", nargs='+')
     window_parser.add_argument('-c', "--ctr_libs", nargs='+')
     window_parser.add_argument('-r', "--pairwise_replicates",
-            action='store_true', default=False)
+        action='store_true', default=False)
     window_parser.add_argument('-P', "--paired_end", action='store_true',
-            default=False)
+        default=False)
     window_parser.add_argument('-M', "--max_insert_size", type=int, default=50)
     window_parser.add_argument('-g', "--gff_folder", required=True)
     window_parser.add_argument("--features", nargs='*', default=[])
@@ -41,19 +42,19 @@ def main():
     window_parser.add_argument('-w', "--window_size", type=int, default=25)
     window_parser.add_argument('-l', "--step_size", type=int, default=5)
     window_parser.add_argument('-n', "--norm_method", default="tmm",
-            choices=["tmm", "count", "manual", "none"])
+        choices=["tmm", "count", "manual", "none"])
     window_parser.add_argument('-s', "--size_factors", type=float, nargs='*',
-            help="Normalization factors for libraries in input order (first "
-            "experiment then control libraries)")
+        help="Normalization factors for libraries in input order (first "
+        "experiment then control libraries)")
     window_parser.add_argument('-m', "--mad_multiplier", type=float,
-            default=2.0)
+        default=2.0)
     window_parser.add_argument('-f', "--fc_cutoff", type=float, default=2.0)
     window_parser.add_argument('-H', "--het_p_val_threshold", type=float,
-            default=0.01)
+        default=0.01)
     window_parser.add_argument('-R', "--rep_pair_p_val_threshold", type=float,
-            default=0.05)
+        default=0.05)
     window_parser.add_argument('-Q', "--padj_threshold", type=float,
-            default=0.05)
+        default=0.05)
     window_parser.add_argument('-o', "--output_folder", default="./")
     
     # Arguments for predefined peak approach
@@ -65,13 +66,28 @@ def main():
     predifined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
     predifined_peak_parser.add_argument('-c', "--ctr_libs", nargs='+')
     predifined_peak_parser.add_argument('-P', "--paired_end",
-            action='store_true', default=False)
+        action='store_true', default=False)
     predifined_peak_parser.add_argument('-M', "--max_insert_size", type=int,
-            default=50)
+        default=50)
     predifined_peak_parser.add_argument('-g', "--gff_folder", required=True)
     predifined_peak_parser.add_argument("--features", nargs='*', default=[])
     predifined_peak_parser.add_argument("--sub_features", nargs='*', default=[])
     predifined_peak_parser.add_argument('-p', "--max_proc", type=int, default=1)
+    predifined_peak_parser.add_argument('-C', "--min_cluster_expr_frac",
+        type=float, choices=[FloatRange(0.0, 1.0)], default=0.01, 
+        metavar="MIN_CLUSTER_EXPR_FRAC", 
+        help="Minimum fraction of the blockbuster cluster expression that a "
+        "maximum block needs to have for further consideration")
+    predifined_peak_parser.add_argument('-O', "--min_block_overlap", type=float,
+        choices=[FloatRange(0.0, 1.0)], default=0.5,
+        metavar="MIN_BLOCK_OVERLAP", help="Minimum fraction of "
+        "the width of the current maximum block that has to overlap with a "
+        "subblock to consider it for peak merging")
+    predifined_peak_parser.add_argument('-B', "--min_max_block_expr_frac",
+        type=float, choices=[FloatRange(0.0, 1.0)], default=0.1,
+        metavar="MIN_MAX_BLOCK_EXPR_FRAC", 
+        help="Minimum fraction of the expression of the current maximum block "
+        "that a subblock needs to have to consider it for peak merging")
     predifined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
             default=2.0)
     predifined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
@@ -220,7 +236,9 @@ def predefined_peak_approach(args):
     print("** Generating peaks from blockbuster output...",
           flush=True)
     t_start = time()
-    predefined_peak.generate_peaks_from_blockbuster()
+    predefined_peak.generate_peaks_from_blockbuster(args.min_cluster_expr_frac,
+        args.min_block_overlap,
+        args.min_max_block_expr_frac)
     t_end = time()
     print("Peak generation finished in %s seconds.\n" % (t_end-t_start),
             flush=True)
@@ -229,9 +247,9 @@ def predefined_peak_approach(args):
     t_start = time()
     predefined_peak.calculate_peak_expression()
     t_end = time()
-    print("Peak expression calulated in %s seconds.\n" % (t_end-t_start),
+    print("Peak expression calculated in %s seconds.\n" % (t_end-t_start),
             flush=True)
-    print("** Calculate peak significance with DESeq2...",
+    print("** Calculating peak significance with DESeq2...",
           flush=True)
     t_start = time()
     predefined_peak.run_deseq2_analysis()
