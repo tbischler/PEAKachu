@@ -4,7 +4,7 @@
 
 import sys
 import argparse
-from peakachulib.float_range import FloatRange
+from peakachulib.float_range import frac_float
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
 from peakachulib.predefined_peak import PredefinedPeakApproach
@@ -74,18 +74,15 @@ def main():
     predifined_peak_parser.add_argument("--sub_features", nargs='*', default=[])
     predifined_peak_parser.add_argument('-p', "--max_proc", type=int, default=1)
     predifined_peak_parser.add_argument('-C', "--min_cluster_expr_frac",
-        type=float, choices=[FloatRange(0.0, 1.0)], default=0.01, 
-        metavar="MIN_CLUSTER_EXPR_FRAC", 
+        type=frac_float, default=0.01,
         help="Minimum fraction of the blockbuster cluster expression that a "
         "maximum block needs to have for further consideration")
-    predifined_peak_parser.add_argument('-O', "--min_block_overlap", type=float,
-        choices=[FloatRange(0.0, 1.0)], default=0.5,
-        metavar="MIN_BLOCK_OVERLAP", help="Minimum fraction of "
+    predifined_peak_parser.add_argument('-O', "--min_block_overlap",
+        type=frac_float, default=0.5, help="Minimum fraction of "
         "the width of the current maximum block that has to overlap with a "
         "subblock to consider it for peak merging")
     predifined_peak_parser.add_argument('-B', "--min_max_block_expr_frac",
-        type=float, choices=[FloatRange(0.0, 1.0)], default=0.1,
-        metavar="MIN_MAX_BLOCK_EXPR_FRAC", 
+        type=frac_float, default=0.1,
         help="Minimum fraction of the expression of the current maximum block "
         "that a subblock needs to have to consider it for peak merging")
     predifined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
