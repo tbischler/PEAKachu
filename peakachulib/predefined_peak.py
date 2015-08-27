@@ -125,7 +125,8 @@ class PredefinedPeakApproach(object):
             blockbuster_fh.write(self._blockbuster_output)
         
     def generate_peaks_from_blockbuster(self, min_cluster_expr_frac,
-        min_block_overlap, min_max_block_expr_frac):
+                                        min_block_overlap,
+                                        min_max_block_expr_frac):
         for replicon in self._replicon_dict:
             self._replicon_dict[replicon]["peak_df"] = pd.DataFrame()
         cluster = {}
@@ -133,7 +134,8 @@ class PredefinedPeakApproach(object):
             if line.startswith('>'):
                 if cluster:
                     self._call_cluster_peaks(cluster, min_cluster_expr_frac,
-                        min_block_overlap, min_max_block_expr_frac)
+                                             min_block_overlap,
+                                             min_max_block_expr_frac)
                     cluster = {}
                 cluster["header"] = line
                 cluster["blocks"] = []
@@ -141,10 +143,11 @@ class PredefinedPeakApproach(object):
                 cluster["blocks"].append(line)
         if cluster:
             self._call_cluster_peaks(cluster, min_cluster_expr_frac,
-                min_block_overlap, min_max_block_expr_frac)
+                                     min_block_overlap,
+                                     min_max_block_expr_frac)
             
     def _call_cluster_peaks(self, cluster, min_cluster_expr_frac,
-        min_block_overlap, min_max_block_expr_frac):
+                            min_block_overlap, min_max_block_expr_frac):
         cluster_entries = cluster["header"].strip().split('\t')
         cluster_expr = float(cluster_entries[5])
         cluster_strand = cluster_entries[4]
@@ -164,16 +167,18 @@ class PredefinedPeakApproach(object):
                 "blockStart", "blockEnd", "blockStrand", "blockExpression",
                 "readCount"])
             block_df = block_df.convert_objects(convert_numeric=True)
-            peak_df = self._split_cluster_peaks(block_df, cluster_expr, peak_df,
-                min_cluster_expr_frac, min_block_overlap,
-                min_max_block_expr_frac)
+            peak_df = self._split_cluster_peaks(block_df, cluster_expr,
+                                                peak_df, min_cluster_expr_frac,
+                                                min_block_overlap,
+                                                min_max_block_expr_frac)
         peak_df = peak_df.astype(np.int64)
         peak_df["peak_strand"] = cluster_strand
         self._replicon_dict[cluster_replicon]["peak_df"] = self._replicon_dict[
             cluster_replicon]["peak_df"].append(peak_df, ignore_index=True)
             
     def _split_cluster_peaks(self, block_df, cluster_expr, peak_df,
-        min_cluster_expr_frac, min_block_overlap, min_max_block_expr_frac):
+                             min_cluster_expr_frac, min_block_overlap,
+                             min_max_block_expr_frac):
         if block_df.empty:
             return peak_df
         max_block_ix = block_df["blockExpression"].idxmax()
@@ -204,7 +209,9 @@ class PredefinedPeakApproach(object):
         peak_df = peak_df.append(pd.Series([peak_start + 1, peak_end], index=[
             "peak_start", "peak_end"]), ignore_index=True)
         return self._split_cluster_peaks(next_block_df, cluster_expr, peak_df,
-            min_cluster_expr_frac, min_block_overlap, min_max_block_expr_frac)
+                                         min_cluster_expr_frac,
+                                         min_block_overlap,
+                                         min_max_block_expr_frac)
         
     def calculate_peak_expression(self):
         for lib in self._lib_dict.values():
@@ -422,7 +429,7 @@ class PredefinedPeakApproach(object):
                             replicon, lib.replicon_dict[replicon]["coverages"][
                                 strand], factor=factor)
                 except Exception as exc:
-                    print("Library %s, replicon %s, %s strand generated an"
+                    print("Library %s, replicon %s, %s strand generated an "
                           "exception during coverage file generation: %s" %
                           (lib.lib_name, replicon, strand, exc), flush=True)
         for strand in strand_dict:
