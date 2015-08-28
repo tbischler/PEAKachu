@@ -264,8 +264,6 @@ class PredefinedPeakApproach(object):
             self._lib_names_list].div(self._size_factors, axis='columns')
         # append DESeq2 output
         self._peak_df = pd.concat([self._peak_df, result_df], axis=1)
-        self._plot_initial_peaks(self._peak_df.baseMean, np.power(
-            2.0, self._peak_df.log2FoldChange))
         # write initial peaks
         peak_columns = (["replicon",
                          "peak_start",
@@ -283,7 +281,14 @@ class PredefinedPeakApproach(object):
             sep='\t', index=False, encoding='utf-8')
         # filter peaks
         print("* Filtering peaks...", flush=True)
-        self._peak_df = self._filter_peaks(self._peak_df)
+        sig_peak_df = self._filter_peaks(self._peak_df)
+        unsig_peak_df = self._peak_df[~self._peak_df.index.isin(
+            sig_peak_df.index)]
+        self._plot_initial_peaks(unsig_peak_df.baseMean,
+                                 np.power(2.0, unsig_peak_df.log2FoldChange),
+                                 sig_peak_df.baseMean,
+                                 np.power(2.0, sig_peak_df.log2FoldChange))
+        self._peak_df = sig_peak_df
     
     def _filter_peaks(self, df):
         print("Removing peaks based on minimum fold change "
@@ -462,23 +467,32 @@ class PredefinedPeakApproach(object):
             peak["replicon"],
             peak.name + 1)
         
-    def _plot_initial_peaks(self, base_means, fcs):
+    def _plot_initial_peaks(self, unsig_base_means, unsig_fcs,
+                            sig_base_means, sig_fcs):
         # MA plot
-        plt.plot(
-            np.log10(base_means),
-            np.log2(fcs), ".", markersize=2.0, alpha=0.3)
-        plt.axhline(y=np.median(np.log2(fcs)))
-        plt.axvline(x=np.median(np.log10(base_means)))
+        plt.plot(np.log10(unsig_base_means),
+                 np.log2(unsig_fcs), ".",
+                 markersize=2.0, alpha=0.3)
+        plt.plot(np.log10(sig_base_means),
+                 np.log2(sig_fcs), ".",
+                 markersize=2.0, color="red", alpha=0.3)
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
         plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
         plt.close()
         # HexBin plot
-        df = pd.DataFrame({'log10 base mean': np.log10(base_means),
-                           'log2 fold-change': np.log2(fcs)})
+        df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
+            sig_base_means)), 'log2 fold-change': np.log2(unsig_fcs.append(
+                sig_fcs))})
         df.plot(kind='hexbin', x='log10 base mean',
                 y='log2 fold-change', gridsize=50, bins='log')
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("HexBin_plot")
         plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
         plt.close()

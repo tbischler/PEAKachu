@@ -293,6 +293,18 @@ class WindowApproach(object):
 
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
+        # plot windows
+        print("Plotting normalized windows...", flush=True)
+        t_start = time()
+        unsig_window_df = self._initial_window_df[
+            ~self._initial_window_df.index.isin(self._window_df.index)]
+        self._plot_initial_windows(unsig_window_df.base_means,
+                                   unsig_window_df.fold_change,
+                                   self._window_df.base_means,
+                                   self._window_df.fold_change)
+        t_end = time()
+        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
+        
         if self._window_df.empty:
             return
         self._window_df.to_csv(
@@ -509,38 +521,41 @@ class WindowApproach(object):
                                sep='\t', index=False, encoding='utf-8')
         t_end = time()
         print("Writing took %s seconds." % (t_end-t_start), flush=True)
-        # plot windows
-        print("Plotting normalized windows...", flush=True)
-        t_start = time()
-        self._plot_initial_windows(self._window_df["base_means"],
-                                   self._window_df["fold_change"])
-        t_end = time()
-        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
         # filter windows
         print("* Filtering windows...", flush=True)
+        self._initial_window_df = self._window_df.copy()
         self._window_df = self._filter_windows_df(self._window_df)
-            
-    def _plot_initial_windows(self, base_means, fcs):
+
+    def _plot_initial_windows(self, unsig_base_means, unsig_fcs,
+                              sig_base_means, sig_fcs):
         # MA plot
-        plt.plot(
-            np.log10(base_means),
-            np.log2(fcs), ".", markersize=2.0, alpha=0.3)
-        plt.axhline(y=np.median(np.log2(fcs)))
-        plt.axvline(x=np.median(np.log10(base_means)))
+        plt.plot(np.log10(unsig_base_means),
+                 np.log2(unsig_fcs), ".",
+                 markersize=2.0, alpha=0.3)
+        plt.plot(np.log10(sig_base_means),
+                 np.log2(sig_fcs), ".",
+                 markersize=2.0, color="red", alpha=0.3)
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
         plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
         plt.close()
         # HexBin plot
-        df = pd.DataFrame({'log10 base mean': np.log10(base_means),
-                           'log2 fold-change': np.log2(fcs)})
+        df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
+            sig_base_means)), 'log2 fold-change': np.log2(unsig_fcs.append(
+                sig_fcs))})
         df.plot(kind='hexbin', x='log10 base mean',
                 y='log2 fold-change', gridsize=50, bins='log')
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("HexBin_plot")
         plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
         plt.close()
-    
+
     def _filter_windows_df(self, df):
         ''' This function filters the windows in a data frame by minimum
             expression based on a MAD cutoff and requires higher expression
