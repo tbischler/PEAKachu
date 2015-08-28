@@ -227,8 +227,8 @@ class PredefinedPeakApproach(object):
                     "peak_df"][lib_name] = lib.replicon_dict[
                         replicon]["peak_counts"]
             # add pseudocounts
-            self._replicon_dict[
-                replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
+            # self._replicon_dict[
+            #    replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
             self._peak_df = self._peak_df.append(self._replicon_dict[replicon][
                 "peak_df"])
         
