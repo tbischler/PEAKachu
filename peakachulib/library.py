@@ -47,12 +47,12 @@ class Library(object):
     def _count_reads_per_window(self, replicon, start, end):
         window_expr = {}
         for strand in ["+", "-"]:
-            window_expr[strand] = np.mean(self.replicon_dict[replicon][
+            window_expr[strand] = np.max(self.replicon_dict[replicon][
                 "coverages"][strand][start:end])
         return window_expr
     
     def _count_reads_per_peak(self, replicon, start, end, strand):
-        return np.mean(self.replicon_dict[replicon]["coverages"][strand]
+        return np.max(self.replicon_dict[replicon]["coverages"][strand]
                        [start:end])
         
     def count_reads_for_windows(self):
