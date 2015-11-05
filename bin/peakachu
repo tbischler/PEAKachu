@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 """Peak calling tool for CLIP-seq data"""
-
 import sys
 import argparse
 from peakachulib.float_range import frac_float
@@ -168,7 +167,7 @@ def window_approach(args):
             print("  Experiment and control libraries are treated as pairs "
                   "according to input order.")
         else:
-            print("  All combinations of experiment and control library pairs "
+            print("  All combinations of experiment and control library pairs"
                   " that include all libraries are tested and the result with"
                   " lowest significance is selected.")
         window.perform_g_test_with_repl_for_windows()
