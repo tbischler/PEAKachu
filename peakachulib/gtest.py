@@ -56,7 +56,7 @@ class GTest(object):
             rep_g_values = comb_df.apply(self._gtest, axis=1)
             rep_p_values = rep_g_values.apply(self._g_to_p_value, args=(1,))
             tot_g_value = rep_g_values.sum()
-            g_value_dict[tot_g_value] = rep_p_values.max()
+            g_value_dict[tot_g_value] = rep_p_values
         self._total_g_res["g_value"] = max(g_value_dict.keys())
         self._replicate_p_values = g_value_dict[self._total_g_res["g_value"]]
         # Degrees of freedom = replicate number
