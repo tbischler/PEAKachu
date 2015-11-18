@@ -250,16 +250,16 @@ class WindowApproach(object):
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict])
+                        [lib_name for lib_name in self._lib_dict] + 
+                        ["base_means",
+                         "fold_change"])
         if len(self._exp_lib_list) > 1:
             peak_columns += ["heterogenous_G_p_value",
                              "replicate_G_p_values",
                              "pooled_G_padj_value",
                              "total_G_padj_value"]
         else:
-            peak_columns += ["base_means",
-                             "fold_change",
-                             "single_G_padj_value"]
+            peak_columns.append("single_G_padj_value")
         feature_columns = ["feature_type",
                            "feature_start",
                            "feature_end",
