@@ -57,38 +57,43 @@ def main():
     window_parser.add_argument('-o', "--output_folder", default="./")
     
     # Arguments for predefined peak approach
-    predifined_peak_parser = subparsers.add_parser(
+    predefined_peak_parser = subparsers.add_parser(
         "predefined_peak", help="Define peaks using shape-dependent predefined "
         "peaks based on experiment libraries and subsequent comparison to a "
         "control")
-    predifined_peak_parser.set_defaults(func=predefined_peak_approach)
-    predifined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
-    predifined_peak_parser.add_argument('-c', "--ctr_libs", nargs='+')
-    predifined_peak_parser.add_argument('-P', "--paired_end",
+    predefined_peak_parser.set_defaults(func=predefined_peak_approach)
+    predefined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
+    predefined_peak_parser.add_argument('-c', "--ctr_libs", nargs='+')
+    predefined_peak_parser.add_argument('-P', "--paired_end",
         action='store_true', default=False)
-    predifined_peak_parser.add_argument('-M', "--max_insert_size", type=int,
+    predefined_peak_parser.add_argument('-M', "--max_insert_size", type=int,
         default=50)
-    predifined_peak_parser.add_argument('-g', "--gff_folder", required=True)
-    predifined_peak_parser.add_argument("--features", nargs='*', default=[])
-    predifined_peak_parser.add_argument("--sub_features", nargs='*', default=[])
-    predifined_peak_parser.add_argument('-p', "--max_proc", type=int, default=1)
-    predifined_peak_parser.add_argument('-C', "--min_cluster_expr_frac",
+    predefined_peak_parser.add_argument('-g', "--gff_folder", required=True)
+    predefined_peak_parser.add_argument("--features", nargs='*', default=[])
+    predefined_peak_parser.add_argument("--sub_features", nargs='*', default=[])
+    predefined_peak_parser.add_argument('-p', "--max_proc", type=int, default=1)
+    predefined_peak_parser.add_argument('-C', "--min_cluster_expr_frac",
         type=frac_float, default=0.01,
         help="Minimum fraction of the blockbuster cluster expression that a "
         "maximum block needs to have for further consideration")
-    predifined_peak_parser.add_argument('-O', "--min_block_overlap",
+    predefined_peak_parser.add_argument('-O', "--min_block_overlap",
         type=frac_float, default=0.5, help="Minimum fraction of "
         "the width of the current maximum block that has to overlap with a "
         "subblock to consider it for peak merging")
-    predifined_peak_parser.add_argument('-B', "--min_max_block_expr_frac",
+    predefined_peak_parser.add_argument('-B', "--min_max_block_expr_frac",
         type=frac_float, default=0.1,
         help="Minimum fraction of the expression of the current maximum block "
         "that a subblock needs to have to consider it for peak merging")
-    predifined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
+    predefined_peak_parser.add_argument('-n', "--norm_method", default="tmm",
+        choices=["deseq", "manual", "none"])
+    predefined_peak_parser.add_argument('-s', "--size_factors", type=float,
+        nargs='*', help="Normalization factors for libraries in input order "
+        "(first experiment then control libraries)")
+    predefined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
             default=2.0)
-    predifined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
+    predefined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
             default=0.05)
-    predifined_peak_parser.add_argument('-o', "--output_folder", default=".")
+    predefined_peak_parser.add_argument('-o', "--output_folder", default=".")
     
     try:
         args = parser.parse_args()
@@ -195,6 +200,23 @@ def predefined_peak_approach(args):
     This function initiates the peak detection via the predefined peak
     approach
     '''
+    lib_count = len(args.exp_libs) + len(args.ctr_libs)
+    print("Selected normalization method is: %s" % args.norm_method)
+    if args.norm_method == "manual":
+        if not (len(args.size_factors) == (lib_count)):
+            sys.stderr.write(
+                    "Normalization factors do not match library number!\n")
+            sys.exit(1)
+        size_factors = [value/max(args.size_factors)
+                        for value in args.size_factors]
+    elif args.norm_method == "none":
+        if args.size_factors:
+            sys.stderr.write("Specified size factors were ignored!\n")
+        size_factors = [1.0] * (lib_count)
+    else:
+        if args.size_factors:
+            sys.stderr.write("Specified size factors were ignored!\n")
+        size_factors = None
     replicons = Replicons(args.ctr_libs, args.exp_libs, args.gff_folder,
                           args.features, args.sub_features)
     print("** Initiating replicons and reading annotations from .gff files...",
@@ -248,7 +270,7 @@ def predefined_peak_approach(args):
     print("** Calculating peak significance with DESeq2...",
           flush=True)
     t_start = time()
-    predefined_peak.run_deseq2_analysis()
+    predefined_peak.run_deseq2_analysis(size_factors)
     t_end = time()
     print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
             flush=True)
