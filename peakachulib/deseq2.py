@@ -7,12 +7,14 @@ pandas2ri.activate()
 
 class RunDESeq2(object):
 
-    def __init__(self, count_df, exp_lib_list, ctr_lib_list, size_factors):
+    def __init__(self, count_df, exp_lib_list, ctr_lib_list, size_factors,
+                 pairwise_replicates):
         r("suppressMessages(library(DESeq2))")
         self._count_df = count_df
         self._exp_lib_list = exp_lib_list
         self._ctr_lib_list = ctr_lib_list
         self._size_factors = size_factors
+        self._pairwise_replicates = pairwise_replicates
         
     def run_deseq2(self):
         self._count_df = np.round(self._count_df, decimals=0)
@@ -20,27 +22,34 @@ class RunDESeq2(object):
         libs = self._exp_lib_list + self._ctr_lib_list
         conds = ["exp"] * len(self._exp_lib_list) + ["ctr"] * len(
             self._ctr_lib_list)
-        colData = robjects.DataFrame({"conditions": robjects.StrVector(conds)})
+        print(conds)
+        if self._pairwise_replicates:
+            samples = list(range(1, len(self._exp_lib_list) + 1)) + list(
+                range(1, len(self._ctr_lib_list) + 1))
+            print(samples)
+            colData = robjects.DataFrame({
+                    "conditions": robjects.StrVector(conds), 
+                    "samples": robjects.StrVector(samples)})
+            design = Formula('~ samples + conditions')
+        else:
+            colData = robjects.DataFrame(
+                    {"conditions": robjects.StrVector(conds)})
+            design = Formula('~ conditions')
         colData.rownames = libs
-        #design = r("design <- ~ conditions")
-        design = Formula('~ conditions')
         dds = r.DESeqDataSetFromMatrix(countData=self._count_df,
                                        colData=colData, design=design)
-        #dds = r.DESeq(dds)
         if self._size_factors is None:
             dds = r.estimateSizeFactors(dds)
         else:
-            robjects.globalenv["dds"] = dds
-            robjects.globalenv["sf"] = robjects.FloatVector(self._size_factors)
-            r("sizeFactors(dds) <- sf")
-            dds = robjects.globalenv["dds"]
-            r.rm("dds")
+            assign_sf = r["sizeFactors<-"]
+            dds = assign_sf(object=dds, value=robjects.FloatVector(
+                self._size_factors))
         dds = r.estimateDispersions(dds)
         dds = r.nbinomWaldTest(dds)
         size_factors = pd.Series(r.sizeFactors(dds),
                                  index=self._count_df.columns)
         results = r.results(dds, contrast=robjects.StrVector(
-            ("conditions", "exp", "ctr")))
+            ("conditions", "exp", "ctr")), altHypothesis="greater")
         results_df = pandas2ri.ri2py_dataframe(r['as.data.frame'](results))
         results_df.index = self._count_df.index
         return(results_df, size_factors)

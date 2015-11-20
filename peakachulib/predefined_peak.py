@@ -253,11 +253,12 @@ class PredefinedPeakApproach(object):
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
               flush=True)
     
-    def run_deseq2_analysis(self, size_factors):
+    def run_deseq2_analysis(self, size_factors, pairwise_replicates):
         count_df = self._peak_df.loc[:, self._exp_lib_list +
                                      self._ctr_lib_list]
         run_deseq2 = RunDESeq2(
-            count_df, self._exp_lib_list, self._ctr_lib_list, size_factors)
+            count_df, self._exp_lib_list, self._ctr_lib_list, size_factors,
+            pairwise_replicates)
         result_df, self._size_factors = run_deseq2.run_deseq2()
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[

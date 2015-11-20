@@ -64,6 +64,8 @@ def main():
     predefined_peak_parser.set_defaults(func=predefined_peak_approach)
     predefined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
     predefined_peak_parser.add_argument('-c', "--ctr_libs", nargs='+')
+    predefined_peak_parser.add_argument('-r', "--pairwise_replicates",
+        action='store_true', default=False)
     predefined_peak_parser.add_argument('-P', "--paired_end",
         action='store_true', default=False)
     predefined_peak_parser.add_argument('-M', "--max_insert_size", type=int,
@@ -270,7 +272,7 @@ def predefined_peak_approach(args):
     print("** Calculating peak significance with DESeq2...",
           flush=True)
     t_start = time()
-    predefined_peak.run_deseq2_analysis(size_factors)
+    predefined_peak.run_deseq2_analysis(size_factors, args.pairwise_replicates)
     t_end = time()
     print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
             flush=True)
