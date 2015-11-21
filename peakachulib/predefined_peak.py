@@ -88,10 +88,11 @@ class PredefinedPeakApproach(object):
             split_index = pd.DataFrame(list(self._replicon_dict[replicon][
                 "reads"]["index"].str.split(',')), columns=[
                     "start", "end", "strand"])
-            split_index = split_index.convert_objects(convert_numeric=True)
+            split_index.loc[:, ["start", "end"]] = split_index.loc[:,
+                ["start", "end"]].apply(pd.to_numeric)
             del self._replicon_dict[replicon]["reads"]["index"]
             self._replicon_dict[replicon]["reads"] = split_index.join(
-                self._replicon_dict[replicon]["reads"]).sort(
+                self._replicon_dict[replicon]["reads"]).sort_values(
                     ["strand", "start", "end"], ascending=[False, True, True])
             self._replicon_dict[replicon]["reads"]["replicon"] = replicon
             output_df = output_df.append(
@@ -164,11 +165,13 @@ class PredefinedPeakApproach(object):
                 "peak_start", "peak_end"]), ignore_index=True)
         else:
             blocks = [block.strip().split('\t') for block in cluster["blocks"]]
-            block_df = pd.DataFrame(blocks, columns=[
-                "blockNb", "blockChrom",
+            block_df = pd.DataFrame(blocks, columns=["blockNb", "blockChrom",
                 "blockStart", "blockEnd", "blockStrand", "blockExpression",
                 "readCount"])
-            block_df = block_df.convert_objects(convert_numeric=True)
+            block_df.loc[:, ["blockNb", "blockStart", "blockEnd",
+                "blockExpression", "readCount"]] = block_df.loc[:, ["blockNb",
+                "blockStart", "blockEnd", "blockExpression",
+                "readCount"]].apply(pd.to_numeric)
             peak_df = self._split_cluster_peaks(block_df, cluster_expr,
                                                 peak_df, min_cluster_expr_frac,
                                                 min_block_overlap,
@@ -354,7 +357,7 @@ class PredefinedPeakApproach(object):
             if self._replicon_dict[replicon]["peak_df"].empty:
                 continue
             output_df = pd.DataFrame()
-            self._replicon_dict[replicon]["peak_df"].sort(
+            self._replicon_dict[replicon]["peak_df"].sort_values(
                 ["replicon", "peak_start"], inplace=True)
             self._replicon_dict[replicon]["peak_df"].reset_index(
                 drop=True, inplace=True)

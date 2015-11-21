@@ -274,7 +274,7 @@ class WindowApproach(object):
                 continue
             output_df = pd.DataFrame()
             self._replicon_dict[replicon]["peak_df"]["replicon"] = replicon
-            self._replicon_dict[replicon]["peak_df"].sort(
+            self._replicon_dict[replicon]["peak_df"].sort_values(
                 ["replicon", "peak_start"], inplace=True)
             self._replicon_dict[replicon]["peak_df"].reset_index(
                 drop=True, inplace=True)
