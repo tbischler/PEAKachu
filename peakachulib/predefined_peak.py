@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from statsmodels.robust.scale import mad
 import pandas as pd
 pd.options.display.mpl_style = 'default'
 font = {'family': 'sans-serif', 'size': 7}
@@ -23,12 +24,13 @@ class PredefinedPeakApproach(object):
     This class is used for peak detection via predefining peaks based on shape
     and subsequent comparison to a control
     '''
-    def __init__(self, replicon_dict, max_proc, padj_threshold, fc_cutoff,
-                 output_folder):
+    def __init__(self, replicon_dict, max_proc, padj_threshold, mad_multiplier,
+                 fc_cutoff, output_folder):
         self._lib_dict = OrderedDict()
         self._replicon_dict = replicon_dict  # own copy of replicon_dict
         self._max_proc = max_proc
         self._padj_threshold = padj_threshold
+        self._mad_multiplier = mad_multiplier
         self._fc_cutoff = fc_cutoff
         self._output_folder = output_folder + "/predefined_peak_approach"
         if not exists(self._output_folder):
@@ -292,18 +294,33 @@ class PredefinedPeakApproach(object):
         self._peak_df = sig_peak_df
     
     def _filter_peaks(self, df):
+        # calculate mad for original data frame
+        median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
+            axis=1), center=0.0)
+        print("Removing peaks based on padj from DataFrame with %s rows..."
+              % len(df), flush=True)
+        t_start = time()
+        df = df.query('padj < @self._padj_threshold')
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
+        # minimum expression cutoff based on mean over experiment libraries
+        print("Removing peaks based on mad cutoff from DataFrame "
+              "with %s rows..." % len(df), flush=True)
+        t_start = time()
+        min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
+        print("Minimal peak expression based on mean over RIP/CLIP "
+              "libraries:" "%s (MAD from zero: %s)" % (
+                  min_expr, median_abs_dev_from_zero), flush=True)
+        df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
         print("Removing peaks based on minimum fold change "
               "from DataFrame with %s rows..." % len(df), flush=True)
         t_start = time()
         log2_fc_cutoff = np.log2(self._fc_cutoff)
         df = df.query('log2FoldChange >= @log2_fc_cutoff')
-        t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
-        print("Removing peaks based on padj from DataFrame with %s rows..."
-              % len(df), flush=True)
-        t_start = time()
-        df = df.query('padj < @self._padj_threshold')
         t_end = time()
         print("Removal took %s seconds. DataFrame contains now %s rows." % (
             (t_end-t_start), len(df)), flush=True)

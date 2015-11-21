@@ -91,6 +91,8 @@ def main():
     predefined_peak_parser.add_argument('-s', "--size_factors", type=float,
         nargs='*', help="Normalization factors for libraries in input order "
         "(first experiment then control libraries)")
+    predefined_peak_parser.add_argument('-m', "--mad_multiplier", type=float,
+        default=2.0)
     predefined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
             default=2.0)
     predefined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
@@ -232,6 +234,7 @@ def predefined_peak_approach(args):
             replicons.replicon_dict,
             args.max_proc,
             args.padj_threshold,
+            args.mad_multiplier,
             args.fc_cutoff,
             args.output_folder)
     print("** Initializing libraries...",
