@@ -22,11 +22,9 @@ class RunDESeq2(object):
         libs = self._exp_lib_list + self._ctr_lib_list
         conds = ["exp"] * len(self._exp_lib_list) + ["ctr"] * len(
             self._ctr_lib_list)
-        print(conds)
         if self._pairwise_replicates:
             samples = list(range(1, len(self._exp_lib_list) + 1)) + list(
                 range(1, len(self._ctr_lib_list) + 1))
-            print(samples)
             colData = robjects.DataFrame({
                     "conditions": robjects.StrVector(conds), 
                     "samples": robjects.StrVector(samples)})
