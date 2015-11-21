@@ -284,7 +284,7 @@ class PredefinedPeakApproach(object):
                          "padj"])
         self._peak_df.loc[:, peak_columns].to_csv(
             "%s/initial_peaks.csv" % (self._output_folder),
-            sep='\t', index=False, encoding='utf-8')
+            sep='\t', na_rep='NA', index=False, encoding='utf-8')
         # filter peaks
         print("* Filtering peaks...", flush=True)
         sig_peak_df = self._filter_peaks(self._peak_df)
@@ -367,12 +367,14 @@ class PredefinedPeakApproach(object):
                     'records'):
                 overlapping_features = self._find_overlapping_features(peak)
                 for match in overlapping_features:
-                    output_df = output_df.append(pd.Series(peak).append(
-                        pd.Series(match)), ignore_index=True)
-            output_df = output_df.loc[:, peak_columns + feature_columns]
+                    entry_dict = peak.copy()
+                    entry_dict.update(match)
+                    output_df = output_df.append(pd.DataFrame(entry_dict,
+                        index=[0], columns=peak_columns+feature_columns),
+                        ignore_index=True)
             output_df.to_csv(
                 "%s/peaks_%s.csv" % (self._output_folder, replicon),
-                sep='\t', index=False, encoding='utf-8')
+                sep='\t', na_rep='NA', index=False, encoding='utf-8')
 
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
