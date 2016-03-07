@@ -8,7 +8,7 @@ import numpy as np
 from statsmodels.robust.scale import mad
 from statsmodels.sandbox.stats.multicomp import multipletests
 import pandas as pd
-pd.options.display.mpl_style = 'default'
+matplotlib.style.use('seaborn-colorblind')
 font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 from concurrent import futures

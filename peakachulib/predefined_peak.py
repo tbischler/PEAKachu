@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.robust.scale import mad
 import pandas as pd
-pd.options.display.mpl_style = 'default'
+matplotlib.style.use('seaborn-colorblind')
 font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 from concurrent import futures
