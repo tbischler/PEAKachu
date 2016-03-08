@@ -8,7 +8,7 @@ import numpy as np
 from statsmodels.robust.scale import mad
 from statsmodels.sandbox.stats.multicomp import multipletests
 import pandas as pd
-pd.options.display.mpl_style = 'default'
+matplotlib.style.use('seaborn-colorblind')
 font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 from concurrent import futures
@@ -250,16 +250,16 @@ class WindowApproach(object):
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict])
+                        [lib_name for lib_name in self._lib_dict] + 
+                        ["base_means",
+                         "fold_change"])
         if len(self._exp_lib_list) > 1:
             peak_columns += ["heterogenous_G_p_value",
                              "replicate_G_p_values",
                              "pooled_G_padj_value",
                              "total_G_padj_value"]
         else:
-            peak_columns += ["base_means",
-                             "fold_change",
-                             "single_G_padj_value"]
+            peak_columns.append("single_G_padj_value")
         feature_columns = ["feature_type",
                            "feature_start",
                            "feature_end",
@@ -274,7 +274,7 @@ class WindowApproach(object):
                 continue
             output_df = pd.DataFrame()
             self._replicon_dict[replicon]["peak_df"]["replicon"] = replicon
-            self._replicon_dict[replicon]["peak_df"].sort(
+            self._replicon_dict[replicon]["peak_df"].sort_values(
                 ["replicon", "peak_start"], inplace=True)
             self._replicon_dict[replicon]["peak_df"].reset_index(
                 drop=True, inplace=True)
@@ -284,15 +284,29 @@ class WindowApproach(object):
                     'records'):
                 overlapping_features = self._find_overlapping_features(peak)
                 for match in overlapping_features:
-                    output_df = output_df.append(pd.Series(peak).append(
-                        pd.Series(match)), ignore_index=True)
-            output_df = output_df.loc[:, peak_columns + feature_columns]
+                    entry_dict = peak.copy()
+                    entry_dict.update(match)
+                    output_df = output_df.append(pd.DataFrame(entry_dict,
+                        index=[0], columns=peak_columns+feature_columns),
+                        ignore_index=True)
             output_df.to_csv(
                 "%s/peaks_%s.csv" % (self._output_folder, replicon),
-                sep='\t', index=False, encoding='utf-8')
+                sep='\t', na_rep='NA', index=False, encoding='utf-8')
 
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
+        # plot windows
+        print("Plotting normalized windows...", flush=True)
+        t_start = time()
+        unsig_window_df = self._initial_window_df[
+            ~self._initial_window_df.index.isin(self._window_df.index)]
+        self._plot_initial_windows(unsig_window_df.base_means,
+                                   unsig_window_df.fold_change,
+                                   self._window_df.base_means,
+                                   self._window_df.fold_change)
+        t_end = time()
+        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
+        
         if self._window_df.empty:
             return
         self._window_df.to_csv(
@@ -509,38 +523,41 @@ class WindowApproach(object):
                                sep='\t', index=False, encoding='utf-8')
         t_end = time()
         print("Writing took %s seconds." % (t_end-t_start), flush=True)
-        # plot windows
-        print("Plotting normalized windows...", flush=True)
-        t_start = time()
-        self._plot_initial_windows(self._window_df["base_means"],
-                                   self._window_df["fold_change"])
-        t_end = time()
-        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
         # filter windows
         print("* Filtering windows...", flush=True)
+        self._initial_window_df = self._window_df.copy()
         self._window_df = self._filter_windows_df(self._window_df)
-            
-    def _plot_initial_windows(self, base_means, fcs):
+
+    def _plot_initial_windows(self, unsig_base_means, unsig_fcs,
+                              sig_base_means, sig_fcs):
         # MA plot
-        plt.plot(
-            np.log10(base_means),
-            np.log2(fcs), ".", markersize=2.0, alpha=0.3)
-        plt.axhline(y=np.median(np.log2(fcs)))
-        plt.axvline(x=np.median(np.log10(base_means)))
+        plt.plot(np.log10(unsig_base_means),
+                 np.log2(unsig_fcs), ".",
+                 markersize=2.0, alpha=0.3)
+        plt.plot(np.log10(sig_base_means),
+                 np.log2(sig_fcs), ".",
+                 markersize=2.0, color="red", alpha=0.3)
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
         plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
         plt.close()
         # HexBin plot
-        df = pd.DataFrame({'log10 base mean': np.log10(base_means),
-                           'log2 fold-change': np.log2(fcs)})
+        df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
+            sig_base_means)), 'log2 fold-change': np.log2(unsig_fcs.append(
+                sig_fcs))})
         df.plot(kind='hexbin', x='log10 base mean',
                 y='log2 fold-change', gridsize=50, bins='log')
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("HexBin_plot")
         plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
         plt.close()
-    
+
     def _filter_windows_df(self, df):
         ''' This function filters the windows in a data frame by minimum
             expression based on a MAD cutoff and requires higher expression

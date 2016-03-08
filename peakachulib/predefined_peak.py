@@ -5,8 +5,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from statsmodels.robust.scale import mad
 import pandas as pd
-pd.options.display.mpl_style = 'default'
+matplotlib.style.use('seaborn-colorblind')
 font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 from concurrent import futures
@@ -23,12 +24,13 @@ class PredefinedPeakApproach(object):
     This class is used for peak detection via predefining peaks based on shape
     and subsequent comparison to a control
     '''
-    def __init__(self, replicon_dict, max_proc, padj_threshold, fc_cutoff,
-                 output_folder):
+    def __init__(self, replicon_dict, max_proc, padj_threshold, mad_multiplier,
+                 fc_cutoff, output_folder):
         self._lib_dict = OrderedDict()
         self._replicon_dict = replicon_dict  # own copy of replicon_dict
         self._max_proc = max_proc
         self._padj_threshold = padj_threshold
+        self._mad_multiplier = mad_multiplier
         self._fc_cutoff = fc_cutoff
         self._output_folder = output_folder + "/predefined_peak_approach"
         if not exists(self._output_folder):
@@ -58,13 +60,15 @@ class PredefinedPeakApproach(object):
     def generate_combined_bed_file(self):
         # execute read conversion in parallel
         print("** Converting reads to bed format for %s libraries..." % len(
-            self._lib_dict), flush=True)
+            self._exp_lib_list), flush=True)
+        exp_lib_dict = {lib_name: self._lib_dict[lib_name] for lib_name in
+                        self._exp_lib_list}
         t_start = time()
         with futures.ProcessPoolExecutor(
                 max_workers=self._max_proc) as executor:
             future_to_lib_name = {
                 executor.submit(lib.merge_reads):
-                lib.lib_name for lib in self._lib_dict.values()}
+                lib.lib_name for lib in exp_lib_dict.values()}
         for future in futures.as_completed(future_to_lib_name):
             lib_name = future_to_lib_name[future]
             try:
@@ -75,7 +79,7 @@ class PredefinedPeakApproach(object):
         output_df = pd.DataFrame()
         for replicon in sorted(self._replicon_dict):
             self._replicon_dict[replicon]["reads"] = pd.Series()
-            for lib_name, lib in self._lib_dict.items():
+            for lib_name, lib in exp_lib_dict.items():
                 self._replicon_dict[replicon]["reads"] = self._replicon_dict[
                     replicon]["reads"].add(lib.replicon_dict[replicon][
                         "reads"], fill_value=0)
@@ -84,10 +88,11 @@ class PredefinedPeakApproach(object):
             split_index = pd.DataFrame(list(self._replicon_dict[replicon][
                 "reads"]["index"].str.split(',')), columns=[
                     "start", "end", "strand"])
-            split_index = split_index.convert_objects(convert_numeric=True)
+            split_index.loc[:, ["start", "end"]] = split_index.loc[:,
+                ["start", "end"]].apply(pd.to_numeric)
             del self._replicon_dict[replicon]["reads"]["index"]
             self._replicon_dict[replicon]["reads"] = split_index.join(
-                self._replicon_dict[replicon]["reads"]).sort(
+                self._replicon_dict[replicon]["reads"]).sort_values(
                     ["strand", "start", "end"], ascending=[False, True, True])
             self._replicon_dict[replicon]["reads"]["replicon"] = replicon
             output_df = output_df.append(
@@ -118,24 +123,34 @@ class PredefinedPeakApproach(object):
         if not p.returncode == 0:
             print(err)
             sys.exit(1)
+        with open("%s/blockbuster.txt" % (self._output_folder),
+                  'w') as blockbuster_fh:
+            blockbuster_fh.write(self._blockbuster_output)
         
-    def generate_peaks_from_blockbuster(self):
+    def generate_peaks_from_blockbuster(self, min_cluster_expr_frac,
+                                        min_block_overlap,
+                                        min_max_block_expr_frac):
         for replicon in self._replicon_dict:
             self._replicon_dict[replicon]["peak_df"] = pd.DataFrame()
         cluster = {}
         for line in self._blockbuster_output.rstrip().split('\n'):
             if line.startswith('>'):
                 if cluster:
-                    self._call_cluster_peaks(cluster)
+                    self._call_cluster_peaks(cluster, min_cluster_expr_frac,
+                                             min_block_overlap,
+                                             min_max_block_expr_frac)
                     cluster = {}
                 cluster["header"] = line
                 cluster["blocks"] = []
             else:
                 cluster["blocks"].append(line)
         if cluster:
-            self._call_cluster_peaks(cluster)
+            self._call_cluster_peaks(cluster, min_cluster_expr_frac,
+                                     min_block_overlap,
+                                     min_max_block_expr_frac)
             
-    def _call_cluster_peaks(self, cluster):
+    def _call_cluster_peaks(self, cluster, min_cluster_expr_frac,
+                            min_block_overlap, min_max_block_expr_frac):
         cluster_entries = cluster["header"].strip().split('\t')
         cluster_expr = float(cluster_entries[5])
         cluster_strand = cluster_entries[4]
@@ -150,53 +165,58 @@ class PredefinedPeakApproach(object):
                 "peak_start", "peak_end"]), ignore_index=True)
         else:
             blocks = [block.strip().split('\t') for block in cluster["blocks"]]
-            block_df = pd.DataFrame(blocks, columns=[
-                "blockNb", "blockChrom",
+            block_df = pd.DataFrame(blocks, columns=["blockNb", "blockChrom",
                 "blockStart", "blockEnd", "blockStrand", "blockExpression",
                 "readCount"])
-            block_df = block_df.convert_objects(convert_numeric=True)
-            peak_df = self._split_cluster_peaks(
-                block_df, cluster_expr, peak_df)
+            block_df.loc[:, ["blockNb", "blockStart", "blockEnd",
+                "blockExpression", "readCount"]] = block_df.loc[:, ["blockNb",
+                "blockStart", "blockEnd", "blockExpression",
+                "readCount"]].apply(pd.to_numeric)
+            peak_df = self._split_cluster_peaks(block_df, cluster_expr,
+                                                peak_df, min_cluster_expr_frac,
+                                                min_block_overlap,
+                                                min_max_block_expr_frac)
         peak_df = peak_df.astype(np.int64)
         peak_df["peak_strand"] = cluster_strand
         self._replicon_dict[cluster_replicon]["peak_df"] = self._replicon_dict[
             cluster_replicon]["peak_df"].append(peak_df, ignore_index=True)
             
-    def _split_cluster_peaks(self, block_df, cluster_expr, peak_df):
-            if block_df.empty:
-                return peak_df
-            max_block_ix = block_df["blockExpression"].idxmax()
-            max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
-
-            if max_block_expr/cluster_expr < 0.01:
-                return peak_df
-            min_overlap = round(
-                (block_df.loc[max_block_ix, "blockEnd"] -
-                 block_df.loc[max_block_ix, "blockStart"]) * 0.5)
-            min_perc_of_max_block = 0.1
-            
-            overlaps = (block_df.loc[:, "blockEnd"].apply(
-                min, args=(block_df.loc[
-                    max_block_ix, "blockEnd"],)) - block_df.loc[
-                        :, "blockStart"].apply(
-                            max, args=(block_df.loc[
-                                max_block_ix, "blockStart"],))).apply(
-                                    max, args=(0,))
-            peak_blocks = block_df.loc[overlaps >= min_overlap, :]
-            
-            next_block_df = block_df.loc[overlaps == 0, :].reset_index(
-                drop=True)
-            
-            peak_blocks = peak_blocks.loc[
-                (peak_blocks["blockExpression"] /
-                 max_block_expr) >= min_perc_of_max_block, :]
-            
-            peak_start = peak_blocks["blockStart"].min() + 1
-            peak_end = peak_blocks["blockEnd"].max()
-            peak_df = peak_df.append(pd.Series([peak_start, peak_end], index=[
-                "peak_start", "peak_end"]), ignore_index=True)
-            return self._split_cluster_peaks(
-                next_block_df, cluster_expr, peak_df)
+    def _split_cluster_peaks(self, block_df, cluster_expr, peak_df,
+                             min_cluster_expr_frac, min_block_overlap,
+                             min_max_block_expr_frac):
+        if block_df.empty:
+            return peak_df
+        max_block_ix = block_df["blockExpression"].idxmax()
+        max_block_expr = block_df.loc[max_block_ix, "blockExpression"]
+        if max_block_expr/cluster_expr < min_cluster_expr_frac:
+            return peak_df
+        min_overlap = round(
+            (block_df.loc[max_block_ix, "blockEnd"] -
+                block_df.loc[max_block_ix, "blockStart"]) * min_block_overlap)
+        overlaps_with_max_block = (block_df.loc[:, "blockEnd"].apply(
+            min, args=(block_df.loc[
+                max_block_ix, "blockEnd"],)) - block_df.loc[
+                    :, "blockStart"].apply(
+                        max, args=(block_df.loc[
+                            max_block_ix, "blockStart"],))).apply(
+                                max, args=(0,))
+        peak_blocks = block_df.loc[overlaps_with_max_block >= min_overlap, :]
+        peak_blocks = peak_blocks.loc[
+            (peak_blocks["blockExpression"] /
+                max_block_expr) >= min_max_block_expr_frac, :]
+        peak_start = peak_blocks["blockStart"].min()
+        peak_end = peak_blocks["blockEnd"].max()
+        overlaps_with_peak = (block_df.loc[:, "blockEnd"].apply(min, args=(
+            peak_end,)) - block_df.loc[:, "blockStart"].apply(max, args=(
+                peak_start,))).apply(max, args=(0,))
+        next_block_df = block_df.loc[overlaps_with_peak == 0, :].reset_index(
+            drop=True)
+        peak_df = peak_df.append(pd.Series([peak_start + 1, peak_end], index=[
+            "peak_start", "peak_end"]), ignore_index=True)
+        return self._split_cluster_peaks(next_block_df, cluster_expr, peak_df,
+                                         min_cluster_expr_frac,
+                                         min_block_overlap,
+                                         min_max_block_expr_frac)
         
     def calculate_peak_expression(self):
         for lib in self._lib_dict.values():
@@ -212,8 +232,8 @@ class PredefinedPeakApproach(object):
                     "peak_df"][lib_name] = lib.replicon_dict[
                         replicon]["peak_counts"]
             # add pseudocounts
-            self._replicon_dict[
-                replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
+            # self._replicon_dict[
+            #    replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
             self._peak_df = self._peak_df.append(self._replicon_dict[replicon][
                 "peak_df"])
         
@@ -238,36 +258,72 @@ class PredefinedPeakApproach(object):
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
               flush=True)
     
-    def run_deseq2_analysis(self):
+    def run_deseq2_analysis(self, size_factors, pairwise_replicates):
         count_df = self._peak_df.loc[:, self._exp_lib_list +
                                      self._ctr_lib_list]
         run_deseq2 = RunDESeq2(
-            count_df, self._exp_lib_list, self._ctr_lib_list)
+            count_df, self._exp_lib_list, self._ctr_lib_list, size_factors,
+            pairwise_replicates)
         result_df, self._size_factors = run_deseq2.run_deseq2()
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
             self._lib_names_list].div(self._size_factors, axis='columns')
         # append DESeq2 output
         self._peak_df = pd.concat([self._peak_df, result_df], axis=1)
-        self._plot_initial_peaks(self._peak_df.baseMean, np.power(
-            2.0, self._peak_df.log2FoldChange))
-        # filter windows
-        print("* Filtering windows...", flush=True)
-        self._peak_df = self._filter_peaks(self._peak_df)
+        # write initial peaks
+        peak_columns = (["replicon",
+                         "peak_start",
+                         "peak_end",
+                         "peak_strand"] +
+                        [lib_name for lib_name in self._lib_dict] +
+                        ["baseMean",
+                         "log2FoldChange",
+                         "lfcSE",
+                         "stat",
+                         "pvalue",
+                         "padj"])
+        self._peak_df.loc[:, peak_columns].to_csv(
+            "%s/initial_peaks.csv" % (self._output_folder),
+            sep='\t', na_rep='NA', index=False, encoding='utf-8')
+        # filter peaks
+        print("* Filtering peaks...", flush=True)
+        sig_peak_df = self._filter_peaks(self._peak_df)
+        unsig_peak_df = self._peak_df[~self._peak_df.index.isin(
+            sig_peak_df.index)]
+        self._plot_initial_peaks(unsig_peak_df.baseMean,
+                                 np.power(2.0, unsig_peak_df.log2FoldChange),
+                                 sig_peak_df.baseMean,
+                                 np.power(2.0, sig_peak_df.log2FoldChange))
+        self._peak_df = sig_peak_df
     
     def _filter_peaks(self, df):
-        print("Removing windows based on minimum fold change "
+        # calculate mad for original data frame
+        median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
+            axis=1), center=0.0)
+        print("Removing peaks based on padj from DataFrame with %s rows..."
+              % len(df), flush=True)
+        t_start = time()
+        df = df.query('padj < @self._padj_threshold')
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
+        # minimum expression cutoff based on mean over experiment libraries
+        print("Removing peaks based on mad cutoff from DataFrame "
+              "with %s rows..." % len(df), flush=True)
+        t_start = time()
+        min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
+        print("Minimal peak expression based on mean over RIP/CLIP "
+              "libraries:" "%s (MAD from zero: %s)" % (
+                  min_expr, median_abs_dev_from_zero), flush=True)
+        df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
+        print("Removing peaks based on minimum fold change "
               "from DataFrame with %s rows..." % len(df), flush=True)
         t_start = time()
         log2_fc_cutoff = np.log2(self._fc_cutoff)
         df = df.query('log2FoldChange >= @log2_fc_cutoff')
-        t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
-        print("Removing windows based on padj from DataFrame with %s rows..."
-              % len(df), flush=True)
-        t_start = time()
-        df = df.query('padj < @self._padj_threshold')
         t_end = time()
         print("Removal took %s seconds. DataFrame contains now %s rows." % (
             (t_end-t_start), len(df)), flush=True)
@@ -301,7 +357,7 @@ class PredefinedPeakApproach(object):
             if self._replicon_dict[replicon]["peak_df"].empty:
                 continue
             output_df = pd.DataFrame()
-            self._replicon_dict[replicon]["peak_df"].sort(
+            self._replicon_dict[replicon]["peak_df"].sort_values(
                 ["replicon", "peak_start"], inplace=True)
             self._replicon_dict[replicon]["peak_df"].reset_index(
                 drop=True, inplace=True)
@@ -311,12 +367,14 @@ class PredefinedPeakApproach(object):
                     'records'):
                 overlapping_features = self._find_overlapping_features(peak)
                 for match in overlapping_features:
-                    output_df = output_df.append(pd.Series(peak).append(
-                        pd.Series(match)), ignore_index=True)
-            output_df = output_df.loc[:, peak_columns + feature_columns]
+                    entry_dict = peak.copy()
+                    entry_dict.update(match)
+                    output_df = output_df.append(pd.DataFrame(entry_dict,
+                        index=[0], columns=peak_columns+feature_columns),
+                        ignore_index=True)
             output_df.to_csv(
                 "%s/peaks_%s.csv" % (self._output_folder, replicon),
-                sep='\t', index=False, encoding='utf-8')
+                sep='\t', na_rep='NA', index=False, encoding='utf-8')
 
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
@@ -399,7 +457,7 @@ class PredefinedPeakApproach(object):
                             replicon, lib.replicon_dict[replicon]["coverages"][
                                 strand], factor=factor)
                 except Exception as exc:
-                    print("Library %s, replicon %s, %s strand generated an"
+                    print("Library %s, replicon %s, %s strand generated an "
                           "exception during coverage file generation: %s" %
                           (lib.lib_name, replicon, strand, exc), flush=True)
         for strand in strand_dict:
@@ -432,23 +490,32 @@ class PredefinedPeakApproach(object):
             peak["replicon"],
             peak.name + 1)
         
-    def _plot_initial_peaks(self, base_means, fcs):
+    def _plot_initial_peaks(self, unsig_base_means, unsig_fcs,
+                            sig_base_means, sig_fcs):
         # MA plot
-        plt.plot(
-            np.log10(base_means),
-            np.log2(fcs), ".", markersize=2.0, alpha=0.3)
-        plt.axhline(y=np.median(np.log2(fcs)))
-        plt.axvline(x=np.median(np.log10(base_means)))
+        plt.plot(np.log10(unsig_base_means),
+                 np.log2(unsig_fcs), ".",
+                 markersize=2.0, alpha=0.3)
+        plt.plot(np.log10(sig_base_means),
+                 np.log2(sig_fcs), ".",
+                 markersize=2.0, color="red", alpha=0.3)
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
         plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
         plt.close()
         # HexBin plot
-        df = pd.DataFrame({'log10 base mean': np.log10(base_means),
-                           'log2 fold-change': np.log2(fcs)})
+        df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
+            sig_base_means)), 'log2 fold-change': np.log2(unsig_fcs.append(
+                sig_fcs))})
         df.plot(kind='hexbin', x='log10 base mean',
                 y='log2 fold-change', gridsize=50, bins='log')
+        plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
+        plt.axvline(x=np.median(np.log10(unsig_base_means.append(
+                                         sig_base_means))))
         plt.title("HexBin_plot")
         plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
         plt.close()
