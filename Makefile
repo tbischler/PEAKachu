@@ -59,8 +59,8 @@ package:
 # 	python3 setup.py sdist upload
 # 	@echo "Go to https://pypi.python.org/pypi/PEAKachu/"
 
-# html_doc:
-# 	cd docs && make html && cd ..
+html_doc:
+	cd docs && make html && cd ..
 
 # upload_doc:
 # 	cd docs/build/html/ && zip -r PEAKachu_docs.zip * && cd ../../.. && mv docs/build/html/PEAKachu_docs.zip .
