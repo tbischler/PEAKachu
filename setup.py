@@ -18,6 +18,7 @@ setup(
         "pysam >= 0.9.0",
         "bcbio-gff >= 0.6.2",
         "statsmodels >= 0.7.0rc1",
+        "numexpr >= 2.5"
         "rpy2 >= 2.7.8"
     ],
     scripts=['bin/peakachu'],
