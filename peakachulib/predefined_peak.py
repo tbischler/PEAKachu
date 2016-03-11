@@ -137,6 +137,7 @@ class PredefinedPeakApproach(object):
                 sys.exit(1)
             self._blockbuster_output += self._replicon_dict[replicon][
                 "blockbuster"]["output"]
+            del self._replicon_dict[replicon]["blockbuster"]
         with open("%s/blockbuster.txt" % (self._output_folder),
                   'w') as blockbuster_fh:
             blockbuster_fh.write(self._blockbuster_output)
