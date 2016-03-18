@@ -322,6 +322,25 @@ class PredefinedPeakApproach(object):
                                  np.power(2.0, sig_peak_df.log2FoldChange))
         self._peak_df = sig_peak_df
 
+    def run_analysis_without_control(self, size_factors):
+        count_df = self._peak_df.loc[:, self._exp_lib_list]
+        self._size_factors = size_factors
+        # normalize counts
+        self._peak_df[self._lib_names_list] = self._peak_df[
+            self._lib_names_list].div(self._size_factors, axis='columns')
+        # write initial peaks
+        peak_columns = (["replicon",
+                         "peak_start",
+                         "peak_end",
+                         "peak_strand"] +
+                        [lib_name for lib_name in self._lib_dict])
+        self._peak_df.loc[:, peak_columns].to_csv(
+            "%s/initial_peaks.csv" % (self._output_folder),
+            sep='\t', na_rep='NA', index=False, encoding='utf-8')
+        # filter peaks
+        print("* Filtering peaks...", flush=True)
+        self._peak_df = self._filter_peaks_without_control(self._peak_df)
+
     def _filter_peaks(self, df):
         # calculate mad for original data frame
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
@@ -355,19 +374,38 @@ class PredefinedPeakApproach(object):
             (t_end-t_start), len(df)), flush=True)
         return df
 
+    def _filter_peaks_without_control(self, df):
+        # calculate mad for original data frame
+        median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
+            axis=1), center=0.0)
+        # minimum expression cutoff based on mean over experiment libraries
+        print("Removing peaks based on mad cutoff from DataFrame "
+              "with %s rows..." % len(df), flush=True)
+        t_start = time()
+        min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
+        print("Minimal peak expression based on mean over RIP/CLIP "
+              "libraries:" "%s (MAD from zero: %s)" % (
+                  min_expr, median_abs_dev_from_zero), flush=True)
+        df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
+        return df
+
     def write_output(self):
         peak_columns = (["replicon",
                          "peak_id",
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict] +
-                        ["baseMean",
-                         "log2FoldChange",
-                         "lfcSE",
-                         "stat",
-                         "pvalue",
-                         "padj"])
+                        [lib_name for lib_name in self._lib_dict])
+        if self._ctr_lib_list:
+            peak_columns += ["baseMean",
+                             "log2FoldChange",
+                             "lfcSE",
+                             "stat",
+                             "pvalue",
+                             "padj"]
         feature_columns = ["feature_type",
                            "feature_start",
                            "feature_end",

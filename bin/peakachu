@@ -55,7 +55,7 @@ def main():
     window_parser.add_argument('-Q', "--padj_threshold", type=float,
         default=0.05)
     window_parser.add_argument('-o', "--output_folder", default="./")
-    
+
     # Arguments for predefined peak approach
     predefined_peak_parser = subparsers.add_parser(
         "predefined_peak", help="Define peaks using shape-dependent predefined "
@@ -63,7 +63,8 @@ def main():
         "control")
     predefined_peak_parser.set_defaults(func=predefined_peak_approach)
     predefined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
-    predefined_peak_parser.add_argument('-c', "--ctr_libs", nargs='+')
+    predefined_peak_parser.add_argument('-c', "--ctr_libs", nargs='*',
+                                        default=[])
     predefined_peak_parser.add_argument('-r', "--pairwise_replicates",
         action='store_true', default=False)
     predefined_peak_parser.add_argument('-P', "--paired_end",
@@ -98,7 +99,7 @@ def main():
     predefined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
             default=0.05)
     predefined_peak_parser.add_argument('-o', "--output_folder", default=".")
-    
+
     try:
         args = parser.parse_args()
     except IOError as msg:
@@ -198,7 +199,7 @@ def window_approach(args):
     print("Writing output files took %s seconds.\n" % (t_end-t_start),
             flush=True)
     window.generate_normalized_wiggle_files()
-    
+
 def predefined_peak_approach(args):
     '''
     This function initiates the peak detection via the predefined peak
@@ -213,7 +214,7 @@ def predefined_peak_approach(args):
             sys.exit(1)
         size_factors = [value/max(args.size_factors)
                         for value in args.size_factors]
-    elif args.norm_method == "none":
+    elif args.norm_method == "none" or not args.ctr_libs:
         if args.size_factors:
             sys.stderr.write("Specified size factors were ignored!\n")
         size_factors = [1.0] * (lib_count)
@@ -272,13 +273,23 @@ def predefined_peak_approach(args):
     t_end = time()
     print("Peak expression calculated in %s seconds.\n" % (t_end-t_start),
             flush=True)
-    print("** Calculating peak significance with DESeq2...",
-          flush=True)
-    t_start = time()
-    predefined_peak.run_deseq2_analysis(size_factors, args.pairwise_replicates)
-    t_end = time()
-    print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
-            flush=True)
+    if args.ctr_libs:
+        print("** Calculating peak significance with DESeq2...",
+              flush=True)
+        t_start = time()
+        predefined_peak.run_deseq2_analysis(size_factors,
+                                            args.pairwise_replicates)
+        t_end = time()
+        print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
+                flush=True)
+    else:
+        print("** Calculating peaks without control...",
+                flush=True)
+        t_start = time()
+        predefined_peak.run_analysis_without_control(size_factors)
+        t_end = time()
+        print("Peak calculation finished in %s seconds.\n" % (t_end-t_start),
+                flush=True)
     print("** Writing peak output files...", flush=True)
     t_start = time()
     predefined_peak.write_output()
@@ -286,6 +297,6 @@ def predefined_peak_approach(args):
     print("Writing output files took %s seconds.\n" % (t_end-t_start),
             flush=True)
     predefined_peak.generate_normalized_wiggle_files()
-    
+
 if __name__ == "__main__":
    sys.exit(main())
