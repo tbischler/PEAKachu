@@ -36,3 +36,8 @@ requirements:
 test:
     imports:
         - peakachulib
+    commands:
+        - peakachu
+## the following requires tests, also the required files have to be made part of the distribution
+#    commands:
+#        - tests/test_all.py
