@@ -87,7 +87,7 @@ def main():
         type=frac_float, default=0.1,
         help="Minimum fraction of the expression of the current maximum block "
         "that a subblock needs to have to consider it for peak merging")
-    predefined_peak_parser.add_argument('-n', "--norm_method", default="tmm",
+    predefined_peak_parser.add_argument('-n', "--norm_method", default="deseq",
         choices=["deseq", "manual", "none"])
     predefined_peak_parser.add_argument('-s', "--size_factors", type=float,
         nargs='*', help="Normalization factors for libraries in input order "
