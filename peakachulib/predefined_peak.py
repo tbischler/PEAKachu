@@ -17,7 +17,7 @@ from peakachulib.deseq2 import RunDESeq2
 from time import time
 from collections import OrderedDict
 from subprocess import Popen, PIPE
-
+from copy import deepcopy
 
 class PredefinedPeakApproach(object):
     '''
@@ -35,7 +35,7 @@ class PredefinedPeakApproach(object):
         self._output_folder = output_folder + "/predefined_peak_approach"
         if not exists(self._output_folder):
             makedirs(self._output_folder)
-        
+
     def init_libraries(self, paired_end, max_insert_size, ctr_libs,
                        exp_libs):
         self._ctr_lib_list = [splitext(basename(lib_file))[0]
@@ -49,14 +49,15 @@ class PredefinedPeakApproach(object):
                                  % lib_file)
                 sys.exit(1)
             self._lib_dict[splitext(basename(lib_file))[0]] = Library(
-                paired_end, max_insert_size, lib_file, self._replicon_dict)
+                paired_end, max_insert_size, lib_file,
+                deepcopy(self._replicon_dict))
         self._lib_names_list = list(self._lib_dict.keys())
         print("The following libraries were initialized:\n"
               "# Experiment libraries\n{0}\n"
               "# Control libraries\n{1}".format(
                   '\n'.join(self._exp_lib_list),
                   '\n'.join(self._ctr_lib_list)))
-              
+
     def generate_combined_bed_file(self):
         # execute read conversion in parallel
         print("** Converting reads to bed format for %s libraries..." % len(
@@ -76,7 +77,6 @@ class PredefinedPeakApproach(object):
             except Exception as exc:
                 print('%r generated an exception: %s' % (lib_name, exc),
                       flush=True)
-        output_df = pd.DataFrame()
         for replicon in sorted(self._replicon_dict):
             self._replicon_dict[replicon]["reads"] = pd.Series()
             for lib_name, lib in exp_lib_dict.items():
@@ -88,45 +88,62 @@ class PredefinedPeakApproach(object):
             split_index = pd.DataFrame(list(self._replicon_dict[replicon][
                 "reads"]["index"].str.split(',')), columns=[
                     "start", "end", "strand"])
-            split_index.loc[:, ["start", "end"]] = split_index.loc[:,
-                ["start", "end"]].apply(pd.to_numeric)
+            split_index.loc[:, ["start", "end"]] = split_index.loc[
+                :, ["start", "end"]].apply(pd.to_numeric)
             del self._replicon_dict[replicon]["reads"]["index"]
             self._replicon_dict[replicon]["reads"] = split_index.join(
                 self._replicon_dict[replicon]["reads"]).sort_values(
                     ["strand", "start", "end"], ascending=[False, True, True])
             self._replicon_dict[replicon]["reads"]["replicon"] = replicon
-            output_df = output_df.append(
-                self._replicon_dict[replicon]["reads"], ignore_index=True)
-        output_df["tag_id"] = (output_df.index + 1).map('tag_{:.0f}'.format)
-        output_df = output_df.loc[:,
-                                  ["replicon",
-                                   "start",
-                                   "end",
-                                   "tag_id",
-                                   "count",
-                                   "strand"]]
-        output_df.to_csv(
-            "%s/sorted_reads_for_blockbuster.bed" % (self._output_folder),
-            sep='\t', header=False, index=False, encoding='utf-8')
+            self._replicon_dict[replicon]["reads"]["tag_id"] = (
+                self._replicon_dict[replicon]["reads"].index + 1).map(
+                'tag_{:.0f}'.format)
+            self._replicon_dict[replicon]["reads"] = self._replicon_dict[
+                replicon]["reads"].loc[:,
+                                       ["replicon",
+                                        "start",
+                                        "end",
+                                        "tag_id",
+                                        "count",
+                                        "strand"]]
+            self._replicon_dict[replicon]["reads"].to_csv(
+                "{}/{}_sorted_reads_for_blockbuster.bed".format(
+                    self._output_folder, replicon),
+                sep='\t', header=False, index=False, encoding='utf-8')
         t_end = time()
         print("Reads converted to bed format in %s seconds.\n" % (
             t_end-t_start), flush=True)
-        
+
     def run_blockbuster(self):
-        p = Popen(["blockbuster.x", "-minBlockHeight", "10", "-print",
-                   "1", "-distance", "1",
-                   "{}/sorted_reads_for_blockbuster.bed".format(
-                       self._output_folder)], stdout=PIPE, stderr=PIPE,
-                  universal_newlines=True)
-        self._blockbuster_output, err = p.communicate()
-        print("blockbuster exited with status {}".format(p.returncode))
-        if not p.returncode == 0:
-            print(err)
-            sys.exit(1)
+        self._blockbuster_output = ""
+        for replicon in sorted(self._replicon_dict):
+            self._replicon_dict[replicon][
+                "blockbuster"] = self._blockbuster_worker(replicon)
+            print("blockbuster for replicon {} exited with status {}".format(
+                replicon, self._replicon_dict[replicon]["blockbuster"][
+                    "returncode"]))
+            if not self._replicon_dict[replicon]["blockbuster"][
+                    "returncode"] == 0:
+                print(self._replicon_dict[replicon]["blockbuster"]["error"])
+                sys.exit(1)
+            self._blockbuster_output += self._replicon_dict[replicon][
+                "blockbuster"]["output"]
+            del self._replicon_dict[replicon]["blockbuster"]
         with open("%s/blockbuster.txt" % (self._output_folder),
                   'w') as blockbuster_fh:
             blockbuster_fh.write(self._blockbuster_output)
-        
+
+    def _blockbuster_worker(self, replicon):
+        p = Popen(
+            ["blockbuster.x", "-minBlockHeight", "10", "-print", "1",
+             "-distance", "1",
+             "{}/{}_sorted_reads_for_blockbuster.bed".format(
+                 self._output_folder, replicon)], stdout=PIPE, stderr=PIPE,
+            universal_newlines=True)
+        output, error = p.communicate()
+        returncode = p.returncode
+        return {"output": output, "error": error, "returncode": returncode}
+
     def generate_peaks_from_blockbuster(self, min_cluster_expr_frac,
                                         min_block_overlap,
                                         min_max_block_expr_frac):
@@ -148,7 +165,7 @@ class PredefinedPeakApproach(object):
             self._call_cluster_peaks(cluster, min_cluster_expr_frac,
                                      min_block_overlap,
                                      min_max_block_expr_frac)
-            
+
     def _call_cluster_peaks(self, cluster, min_cluster_expr_frac,
                             min_block_overlap, min_max_block_expr_frac):
         cluster_entries = cluster["header"].strip().split('\t')
@@ -156,7 +173,7 @@ class PredefinedPeakApproach(object):
         cluster_strand = cluster_entries[4]
         cluster_replicon = cluster_entries[1]
         peak_df = pd.DataFrame()
-        
+
         if len(cluster["blocks"]) == 1:
             block_entries = cluster["blocks"][0].strip().split('\t')
             peak_start = int(block_entries[2]) + 1
@@ -180,7 +197,7 @@ class PredefinedPeakApproach(object):
         peak_df["peak_strand"] = cluster_strand
         self._replicon_dict[cluster_replicon]["peak_df"] = self._replicon_dict[
             cluster_replicon]["peak_df"].append(peak_df, ignore_index=True)
-            
+
     def _split_cluster_peaks(self, block_df, cluster_expr, peak_df,
                              min_cluster_expr_frac, min_block_overlap,
                              min_max_block_expr_frac):
@@ -217,7 +234,7 @@ class PredefinedPeakApproach(object):
                                          min_cluster_expr_frac,
                                          min_block_overlap,
                                          min_max_block_expr_frac)
-        
+
     def calculate_peak_expression(self):
         for lib in self._lib_dict.values():
             for replicon in self._replicon_dict:
@@ -231,33 +248,25 @@ class PredefinedPeakApproach(object):
                 self._replicon_dict[replicon][
                     "peak_df"][lib_name] = lib.replicon_dict[
                         replicon]["peak_counts"]
+                del lib.replicon_dict[replicon]["peak_counts"]
             # add pseudocounts
             # self._replicon_dict[
             #    replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
             self._peak_df = self._peak_df.append(self._replicon_dict[replicon][
                 "peak_df"])
-        
+
     def _generate_peak_counts(self):
         # execute read counting in parallel
         print("** Peak read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(lib.count_reads_for_peaks):
-                lib.lib_name for lib in self._lib_dict.values()}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            try:
-                self._lib_dict[lib_name].replicon_dict = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (lib_name, exc),
-                      flush=True)
+        for lib_name, lib in self._lib_dict.items():
+            print(lib_name)
+            lib.count_reads_for_peaks()
         t_end = time()
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
               flush=True)
-    
+
     def run_deseq2_analysis(self, size_factors, pairwise_replicates):
         count_df = self._peak_df.loc[:, self._exp_lib_list +
                                      self._ctr_lib_list]
@@ -295,7 +304,26 @@ class PredefinedPeakApproach(object):
                                  sig_peak_df.baseMean,
                                  np.power(2.0, sig_peak_df.log2FoldChange))
         self._peak_df = sig_peak_df
-    
+
+    def run_analysis_without_control(self, size_factors):
+        count_df = self._peak_df.loc[:, self._exp_lib_list]
+        self._size_factors = size_factors
+        # normalize counts
+        self._peak_df[self._lib_names_list] = self._peak_df[
+            self._lib_names_list].div(self._size_factors, axis='columns')
+        # write initial peaks
+        peak_columns = (["replicon",
+                         "peak_start",
+                         "peak_end",
+                         "peak_strand"] +
+                        [lib_name for lib_name in self._lib_dict])
+        self._peak_df.loc[:, peak_columns].to_csv(
+            "%s/initial_peaks.csv" % (self._output_folder),
+            sep='\t', na_rep='NA', index=False, encoding='utf-8')
+        # filter peaks
+        print("* Filtering peaks...", flush=True)
+        self._peak_df = self._filter_peaks_without_control(self._peak_df)
+
     def _filter_peaks(self, df):
         # calculate mad for original data frame
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
@@ -328,20 +356,39 @@ class PredefinedPeakApproach(object):
         print("Removal took %s seconds. DataFrame contains now %s rows." % (
             (t_end-t_start), len(df)), flush=True)
         return df
-        
+
+    def _filter_peaks_without_control(self, df):
+        # calculate mad for original data frame
+        median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
+            axis=1), center=0.0)
+        # minimum expression cutoff based on mean over experiment libraries
+        print("Removing peaks based on mad cutoff from DataFrame "
+              "with %s rows..." % len(df), flush=True)
+        t_start = time()
+        min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
+        print("Minimal peak expression based on mean over RIP/CLIP "
+              "libraries:" "%s (MAD from zero: %s)" % (
+                  min_expr, median_abs_dev_from_zero), flush=True)
+        df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
+        t_end = time()
+        print("Removal took %s seconds. DataFrame contains now %s rows." % (
+            (t_end-t_start), len(df)), flush=True)
+        return df
+
     def write_output(self):
         peak_columns = (["replicon",
                          "peak_id",
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict] +
-                        ["baseMean",
-                         "log2FoldChange",
-                         "lfcSE",
-                         "stat",
-                         "pvalue",
-                         "padj"])
+                        [lib_name for lib_name in self._lib_dict])
+        if self._ctr_lib_list:
+            peak_columns += ["baseMean",
+                             "log2FoldChange",
+                             "lfcSE",
+                             "stat",
+                             "pvalue",
+                             "padj"]
         feature_columns = ["feature_type",
                            "feature_start",
                            "feature_end",
@@ -378,7 +425,7 @@ class PredefinedPeakApproach(object):
 
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
-        
+
     def _find_overlapping_features(self, peak):
         overlapping_features = []
         for feature in self._replicon_dict[peak["replicon"]]["features"]:
@@ -416,26 +463,21 @@ class PredefinedPeakApproach(object):
         wiggle_folder = "%s/normalized_coverage" % (self._output_folder)
         if not exists(wiggle_folder):
             makedirs(wiggle_folder)
-        
+
         # Generate coverage files in parallel
         print("** Generating normalized coverage files for %s libraries..." %
               (len(self._lib_dict)), flush=True)
         t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(
-                    self._generate_normalized_wiggle_file_for_lib,
-                    lib, size_factor, wiggle_folder):
-                lib.lib_name for lib, size_factor in zip(
-                    self._lib_dict.values(), self._size_factors)}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            print("* Coverage files for library %s generated." % lib_name)
+        for lib_name, size_factor in zip(self._lib_dict.keys(),
+                                         self._size_factors):
+            self._generate_normalized_wiggle_file_for_lib(
+                    self._lib_dict[lib_name], size_factor, wiggle_folder)
+            print("* Coverage files for library %s generated." % lib_name,
+                  flush=True)
         t_end = time()
         print("Coverage file generation finished in %s seconds." % (
             t_end-t_start), flush=True)
-    
+
     def _generate_normalized_wiggle_file_for_lib(self, lib, size_factor,
                                                  wiggle_folder):
         """Perform the coverage calculation for a given library."""
@@ -462,7 +504,7 @@ class PredefinedPeakApproach(object):
                           (lib.lib_name, replicon, strand, exc), flush=True)
         for strand in strand_dict:
             wiggle_writers[strand].close_file()
-    
+
     def _write_gff_file(self, replicon, df):
         with open("%s/peaks_%s.gff" % (self._output_folder, replicon),
                   'w') as out_gff_fh:
@@ -478,7 +520,7 @@ class PredefinedPeakApproach(object):
                                  '\n'.join(df.apply(
                                      self._write_gff_entry, axis=1)),
                                  '\n' if not df.empty else ""))
-    
+
     def _write_gff_entry(self, peak):
         return "%s\t%s\t%s\t%s\t%s\t.\t%s\t.\tID=%s:peak_%s" % (
             peak["replicon"],
@@ -489,7 +531,7 @@ class PredefinedPeakApproach(object):
             peak["peak_strand"],
             peak["replicon"],
             peak.name + 1)
-        
+
     def _plot_initial_peaks(self, unsig_base_means, unsig_fcs,
                             sig_base_means, sig_fcs):
         # MA plot
@@ -519,7 +561,7 @@ class PredefinedPeakApproach(object):
         plt.title("HexBin_plot")
         plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
         plt.close()
-        
+
     def _get_overlap(self, peak_start, peak_end, feature_start, feature_end):
         return max(
             0, min(peak_end, feature_end) - max(peak_start, feature_start) + 1)
