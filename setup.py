@@ -17,9 +17,9 @@ setup(
         "pandas >= 0.17.1",
         "pysam >= 0.9.0",
         "bcbio-gff >= 0.6.2",
-        "statsmodels >= 0.7.0rc1",
-        "numexpr >= 2.5"
-        "rpy2 >= 2.7.8"
+        "statsmodels >= 0.6.1",
+        "numexpr >= 2.5",
+        "rpy2 >= 2.7.6"
     ],
     scripts=['bin/peakachu'],
     license='ISC License (ISCL)',
