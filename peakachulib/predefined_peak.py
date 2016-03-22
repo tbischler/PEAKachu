@@ -502,7 +502,7 @@ class PredefinedPeakApproach(object):
                     print("Library %s, replicon %s, %s strand generated an "
                           "exception during coverage file generation: %s" %
                           (lib.lib_name, replicon, strand, exc), flush=True)
-        for strand in strand_dict:
+        for strand in strand_dict.values():
             wiggle_writers[strand].close_file()
 
     def _write_gff_file(self, replicon, df):

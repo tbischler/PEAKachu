@@ -45,7 +45,7 @@ class WindowApproach(object):
         self._output_folder = output_folder + "/window_approach"
         if not exists(self._output_folder):
             makedirs(self._output_folder)
-        
+
     def init_libraries(self, paired_end, max_insert_size, ctr_libs,
                        exp_libs):
         self._ctr_lib_list = [splitext(basename(lib_file))[0]
@@ -66,7 +66,7 @@ class WindowApproach(object):
               "# Control libraries\n{1}".format(
                   '\n'.join(self._exp_lib_list),
                   '\n'.join(self._ctr_lib_list)))
-    
+
     def generate_window_counts(self):
         self._generate_windows()
         # execute read counting in parallel
@@ -94,7 +94,7 @@ class WindowApproach(object):
         t_end = time()
         print("Data frame generation and filtering finished in %s seconds.\n"
               % (t_end-t_start), flush=True)
-        
+
     def _generate_windows(self):
         for replicon in self._replicon_dict:
             self._replicon_dict[replicon]["window_list"] = []
@@ -110,7 +110,7 @@ class WindowApproach(object):
                     break
                 self._replicon_dict[replicon]["window_list"].append(
                     (w_start, w_end))
-        
+
     def perform_g_test_with_repl_for_windows(self):
         if self._window_df.empty:
             return
@@ -142,7 +142,7 @@ class WindowApproach(object):
         significance.name = "significant"
         self._window_df = pd.concat([self._window_df, p_values, padj_values,
                                      significance], axis=1)
-        
+
     def _perform_g_test_with_repl_for_peaks(self, df):
         if df.empty:
             return df
@@ -168,7 +168,7 @@ class WindowApproach(object):
         padj_values.index = p_values.index
         df = pd.concat([df, p_values, padj_values], axis=1)
         return df
-     
+
     def combine_peaks_and_recalculate_values(self):
         for replicon in self._replicon_dict:
             # forward strand
@@ -192,7 +192,7 @@ class WindowApproach(object):
                 lib.replicon_dict[replicon]["peak_df"] = self._replicon_dict[
                     replicon]["peak_df"]
         self._generate_peak_counts()
-        
+
         for replicon in sorted(self._replicon_dict):
             for lib_name, lib in self._lib_dict.items():
                 self._replicon_dict[
@@ -228,7 +228,7 @@ class WindowApproach(object):
                     replicon]["peak_df"].loc[:, self._exp_lib_list].sum(
                         axis=1) / self._replicon_dict[replicon][
                             "peak_df"].loc[:, self._ctr_lib_list].sum(axis=1))
-            
+
     def _generate_peak_counts(self):
         # execute read counting in parallel
         with futures.ProcessPoolExecutor(
@@ -243,14 +243,14 @@ class WindowApproach(object):
             except Exception as exc:
                 print('%r generated an exception: %s' % (lib_name, exc),
                       flush=True)
-    
+
     def write_output(self):
         peak_columns = (["replicon",
                          "peak_id",
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict] + 
+                        [lib_name for lib_name in self._lib_dict] +
                         ["base_means",
                          "fold_change"])
         if len(self._exp_lib_list) > 1:
@@ -306,13 +306,13 @@ class WindowApproach(object):
                                    self._window_df.fold_change)
         t_end = time()
         print("Plotting took %s seconds." % (t_end-t_start), flush=True)
-        
+
         if self._window_df.empty:
             return
         self._window_df.to_csv(
             "%s/windows_after_prefiltering.csv" % (self._output_folder),
             sep='\t', index=False, encoding='utf-8')
-        
+
     def _find_overlapping_features(self, peak):
         overlapping_features = []
         for feature in self._replicon_dict[peak["replicon"]]["features"]:
@@ -350,7 +350,7 @@ class WindowApproach(object):
         wiggle_folder = "%s/normalized_coverage" % (self._output_folder)
         if not exists(wiggle_folder):
             makedirs(wiggle_folder)
-        
+
         # Generate coverage files in parallel
         print("** Generating normalized coverage files for %s libraries..." %
               (len(self._lib_dict)), flush=True)
@@ -368,7 +368,7 @@ class WindowApproach(object):
         t_end = time()
         print("Coverage file generation finished in %s seconds." % (
             t_end-t_start), flush=True)
-    
+
     def _generate_normalized_wiggle_file_for_lib(self, lib, size_factor,
                                                  wiggle_folder):
         """Perform the coverage calculation for a given library."""
@@ -394,9 +394,9 @@ class WindowApproach(object):
                     print("Library %s, replicon %s, %s strand generated an"
                           "exception during coverage file generation: %s" %
                           (lib.lib_name, replicon, strand, exc), flush=True)
-        for strand in strand_dict:
+        for strand in strand_dict.values():
             wiggle_writers[strand].close_file()
-    
+
     def _write_gff_file(self, replicon, df):
         with open("%s/peaks_%s.gff" % (
                 self._output_folder, replicon), 'w') as out_gff_fh:
@@ -412,7 +412,7 @@ class WindowApproach(object):
                                  '\n'.join(
                                      df.apply(self._write_gff_entry, axis=1)),
                                  '\n' if not df.empty else ""))
-    
+
     def _write_gff_entry(self, peak):
         return "%s\t%s\t%s\t%s\t%s\t.\t%s\t.\tID=%s:peak_%s" % (
             peak["replicon"],
@@ -423,7 +423,7 @@ class WindowApproach(object):
             peak["peak_strand"],
             peak["replicon"],
             peak.name + 1)
-    
+
     def _convert_to_data_frame(self):
         self._window_df = pd.DataFrame()
         for replicon in sorted(self._replicon_dict):
@@ -622,7 +622,7 @@ class WindowApproach(object):
         print("Removal took %s seconds. DataFrame contains now %s rows." % (
             (t_end-t_start), len(df)), flush=True)
         return df
-    
+
     def _single_g_test(self, counts):
         ctr_counts = counts[self._ctr_lib_list]
         ctr_counts = ctr_counts.reset_index(drop=True)
@@ -633,10 +633,10 @@ class WindowApproach(object):
             return pd.Series(g_test.run_with_repl())
         else:
             return pd.Series(g_test.run_without_repl())
-    
+
     def _correct_p_values(self, p_values):
         return pd.Series(multipletests(p_values, method="fdr_bh")[1])
-    
+
     def _check_significance_with_repl(self, p_and_padj_values):
         replicate_G_p_values = pd.Series(p_and_padj_values[
             "replicate_G_p_values"].split('/')).astype('float')
@@ -651,13 +651,13 @@ class WindowApproach(object):
                       self._rep_pair_p_val_threshold).all())):
             return True
         return False
-    
+
     def _check_significance_without_repl(self, p_and_padj_values):
         if (p_and_padj_values.loc["single_G_padj_value"]
                 < self._padj_threshold):
             return True
         return False
-    
+
     def _combine_windows(self, df):
         peak_list = []
         peak = {"peak_start": None, "peak_end": None}
@@ -698,7 +698,7 @@ class WindowApproach(object):
         if peak_df.shape[0] > 1:
             peak_df = peak_df.loc[:, ["peak_start", "peak_end"]]
         return peak_df
-        
+
     def _get_overlap(self, peak_start, peak_end, feature_start, feature_end):
         return max(0,
                    min(peak_end, feature_end)
