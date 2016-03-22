@@ -230,19 +230,15 @@ class WindowApproach(object):
                             "peak_df"].loc[:, self._ctr_lib_list].sum(axis=1))
 
     def _generate_peak_counts(self):
-        # execute read counting in parallel
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(lib.count_reads_for_peaks):
-                lib.lib_name for lib in self._lib_dict.values()}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            try:
-                self._lib_dict[lib_name].replicon_dict = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (lib_name, exc),
-                      flush=True)
+        print("** Peak read counting started for %s libraries..." % len(
+            self._lib_dict), flush=True)
+        t_start = time()
+        for lib_name, lib in self._lib_dict.items():
+            print(lib_name)
+            lib.count_reads_for_peaks()
+        t_end = time()
+        print("Peak read counting finished in %s seconds." % (t_end-t_start),
+              flush=True)
 
     def write_output(self):
         peak_columns = (["replicon",

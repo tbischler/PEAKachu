@@ -256,7 +256,6 @@ class PredefinedPeakApproach(object):
                 "peak_df"])
 
     def _generate_peak_counts(self):
-        # execute read counting in parallel
         print("** Peak read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
