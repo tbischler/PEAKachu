@@ -17,7 +17,7 @@ from peakachulib.deseq2 import RunDESeq2
 from time import time
 from collections import OrderedDict
 from subprocess import Popen, PIPE
-
+from copy import deepcopy
 
 class PredefinedPeakApproach(object):
     '''
@@ -49,7 +49,8 @@ class PredefinedPeakApproach(object):
                                  % lib_file)
                 sys.exit(1)
             self._lib_dict[splitext(basename(lib_file))[0]] = Library(
-                paired_end, max_insert_size, lib_file, self._replicon_dict)
+                paired_end, max_insert_size, lib_file,
+                deepcopy(self._replicon_dict))
         self._lib_names_list = list(self._lib_dict.keys())
         print("The following libraries were initialized:\n"
               "# Experiment libraries\n{0}\n"
@@ -115,19 +116,9 @@ class PredefinedPeakApproach(object):
 
     def run_blockbuster(self):
         self._blockbuster_output = ""
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_replicon = {
-                executor.submit(self._blockbuster_worker, replicon):
-                replicon for replicon in sorted(self._replicon_dict)}
-        for future in futures.as_completed(future_to_replicon):
-            replicon = future_to_replicon[future]
-            try:
-                self._replicon_dict[replicon]["blockbuster"] = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (replicon, exc),
-                      flush=True)
         for replicon in sorted(self._replicon_dict):
+            self._replicon_dict[replicon][
+                "blockbuster"] = self._blockbuster_worker(replicon)
             print("blockbuster for replicon {} exited with status {}".format(
                 replicon, self._replicon_dict[replicon]["blockbuster"][
                     "returncode"]))
@@ -257,6 +248,7 @@ class PredefinedPeakApproach(object):
                 self._replicon_dict[replicon][
                     "peak_df"][lib_name] = lib.replicon_dict[
                         replicon]["peak_counts"]
+                del lib.replicon_dict[replicon]["peak_counts"]
             # add pseudocounts
             # self._replicon_dict[
             #    replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
@@ -268,18 +260,9 @@ class PredefinedPeakApproach(object):
         print("** Peak read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(lib.count_reads_for_peaks):
-                lib.lib_name for lib in self._lib_dict.values()}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            try:
-                self._lib_dict[lib_name].replicon_dict = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (lib_name, exc),
-                      flush=True)
+        for lib_name, lib in self._lib_dict.items():
+            print(lib_name)
+            lib.count_reads_for_peaks()
         t_end = time()
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
               flush=True)
@@ -485,17 +468,12 @@ class PredefinedPeakApproach(object):
         print("** Generating normalized coverage files for %s libraries..." %
               (len(self._lib_dict)), flush=True)
         t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(
-                    self._generate_normalized_wiggle_file_for_lib,
-                    lib, size_factor, wiggle_folder):
-                lib.lib_name for lib, size_factor in zip(
-                    self._lib_dict.values(), self._size_factors)}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            print("* Coverage files for library %s generated." % lib_name)
+        for lib_name, size_factor in zip(self._lib_dict.keys(),
+                                         self._size_factors):
+            self._generate_normalized_wiggle_file_for_lib(
+                    self._lib_dict[lib_name], size_factor, wiggle_folder)
+            print("* Coverage files for library %s generated." % lib_name,
+                  flush=True)
         t_end = time()
         print("Coverage file generation finished in %s seconds." % (
             t_end-t_start), flush=True)
