@@ -7,10 +7,10 @@ source:
 
 build:
     number: 1
+    skip: True # [not py3k]
 
 requirements:
     build:
-        - pandoc
         - python
         - setuptools
         - "biopython >=1.66"
@@ -34,12 +34,13 @@ requirements:
         - "rpy2 >=2.7.6"
         - bioconductor-deseq2
         - bioconductor-edger
+        - blockbuster
 
 test:
     imports:
         - peakachulib
     commands:
-        - peakachu
+        - 'peakachu 2>&1 | grep "^usage" > /dev/null'
 ## the following requires tests, also the required files have to be made part of the distribution
 #    commands:
 #        - tests/test_all.py
