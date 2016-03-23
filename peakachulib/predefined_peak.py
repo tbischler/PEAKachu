@@ -486,7 +486,7 @@ class PredefinedPeakApproach(object):
             open("%s/%s_div_by_%s_%s.wig" % (
                 wiggle_folder, lib.lib_name, size_factor, strand),
                 "w"))) for strand in strand_dict.values()])
-        for replicon in self._replicon_dict:
+        for replicon in sorted(self._replicon_dict):
             for strand in strand_dict:
                 if strand == "-":
                     factor = -1.0/size_factor
