@@ -253,7 +253,7 @@ class PredefinedPeakApproach(object):
             # self._replicon_dict[
             #    replicon]["peak_df"].loc[:, self._lib_names_list] += 1.0
             self._peak_df = self._peak_df.append(self._replicon_dict[replicon][
-                "peak_df"])
+                "peak_df"], ignore_index=True)
 
     def _generate_peak_counts(self):
         print("** Peak read counting started for %s libraries..." % len(
