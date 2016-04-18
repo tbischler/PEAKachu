@@ -243,6 +243,8 @@ class PredefinedPeakApproach(object):
         self._generate_peak_counts()
         self._peak_df = pd.DataFrame()
         for replicon in sorted(self._replicon_dict):
+            if self._replicon_dict[replicon]["peak_df"].empty:
+                continue
             self._replicon_dict[replicon]["peak_df"]["replicon"] = replicon
             for lib_name, lib in self._lib_dict.items():
                 self._replicon_dict[replicon][
