@@ -1,12 +1,12 @@
 package:
     name: peakachu
-    version: "0.0.1"
+    version: "0.0.1alpha0"
 
 source:
     path: ../
 
 build:
-    number: 1
+    number: 0
     skip: True # [not py3k]
 
 requirements:
