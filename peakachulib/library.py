@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 from peakachulib.coverage import Coverage
 from peakachulib.bam_to_bed import BamToBed
+from peakachulib.count import ReadCounter
 
 
 class Library(object):
@@ -12,15 +13,15 @@ class Library(object):
     the reads mapping to different annotations
     '''
     def __init__(self, paired_end, max_insert_size, bam_file, replicon_dict):
-        self._paired_end = paired_end
+        self.paired_end = paired_end
         self.bam_file = bam_file
-        self._max_insert_size = max_insert_size
+        self.max_insert_size = max_insert_size
         self.lib_name = splitext(basename(bam_file))[0]
         self.replicon_dict = replicon_dict
         self._coverage_calculated = False
 
     def _calc_coverage(self):
-        coverage = Coverage(self._paired_end, self._max_insert_size)
+        coverage = Coverage(self.paired_end, self.max_insert_size)
         for replicon, coverages in coverage.calc_coverages(self.bam_file):
             self.replicon_dict[replicon]["coverages"] = deepcopy(coverages)
 
@@ -35,14 +36,13 @@ class Library(object):
                  for window_expr in window_count_list], columns=['+', '-'])
 
     def _calc_peak_expr(self):
+        read_counter = ReadCounter(self.paired_end, self.max_insert_size,
+                                   self.bam_file)
         for replicon in self.replicon_dict:
-            peak_count_list = []
-            for peak in self.replicon_dict[replicon]["peak_df"].to_dict(
-                    'records'):
-                peak_count_list.append(self._count_reads_per_peak(
-                    replicon, peak["peak_start"]-1, peak["peak_end"],
-                    peak["peak_strand"]))
-            self.replicon_dict[replicon]["peak_counts"] = peak_count_list
+            peak_counts = read_counter.count_reads_for_peaks(
+                replicon,
+                self.replicon_dict[replicon]["peak_df"].to_dict('records'))
+            self.replicon_dict[replicon]["peak_counts"] = peak_counts
 
     def _count_reads_per_window(self, replicon, start, end):
         window_expr = {}
@@ -53,7 +53,7 @@ class Library(object):
 
     def _count_reads_per_peak(self, replicon, start, end, strand):
         return np.max(self.replicon_dict[replicon]["coverages"][strand]
-                       [start:end])
+                      [start:end])
 
     def count_reads_for_windows(self):
         if not self._coverage_calculated:
@@ -63,13 +63,10 @@ class Library(object):
         return self.replicon_dict  # it seems that a copy is returned!
 
     def merge_reads(self):
-        bam_to_bed = BamToBed(self._paired_end, self._max_insert_size)
+        bam_to_bed = BamToBed(self.paired_end, self.max_insert_size)
         for replicon, reads in bam_to_bed.generate_bed_format(self.bam_file):
             self.replicon_dict[replicon]["reads"] = pd.Series(reads)
         return self.replicon_dict  # it seems that a copy is returned!
 
     def count_reads_for_peaks(self):
-        if not self._coverage_calculated:
-            self._calc_coverage()
-            self._coverage_calculated = True
         self._calc_peak_expr()

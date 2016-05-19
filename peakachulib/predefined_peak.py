@@ -12,6 +12,7 @@ font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 from concurrent import futures
 from peakachulib.library import Library
+from peakachulib.coverage import Coverage
 from peakachulib.wiggle import WiggleWriter
 from peakachulib.deseq2 import RunDESeq2
 from time import time
@@ -469,10 +470,16 @@ class PredefinedPeakApproach(object):
         print("** Generating normalized coverage files for %s libraries..." %
               (len(self._lib_dict)), flush=True)
         t_start = time()
-        for lib_name, size_factor in zip(self._lib_dict.keys(),
-                                         self._size_factors):
-            self._generate_normalized_wiggle_file_for_lib(
-                    self._lib_dict[lib_name], size_factor, wiggle_folder)
+        with futures.ProcessPoolExecutor(
+                max_workers=self._max_proc) as executor:
+            future_to_lib_name = {
+                executor.submit(
+                    self._generate_normalized_wiggle_file_for_lib,
+                    lib, size_factor, wiggle_folder):
+                lib.lib_name for lib, size_factor in zip(
+                    self._lib_dict.values(), self._size_factors)}
+        for future in futures.as_completed(future_to_lib_name):
+            lib_name = future_to_lib_name[future]
             print("* Coverage files for library %s generated." % lib_name,
                   flush=True)
         t_end = time()
@@ -488,7 +495,9 @@ class PredefinedPeakApproach(object):
             open("%s/%s_div_by_%s_%s.wig" % (
                 wiggle_folder, lib.lib_name, size_factor, strand),
                 "w"))) for strand in strand_dict.values()])
-        for replicon in sorted(self._replicon_dict):
+        coverage = Coverage(lib.paired_end, lib.max_insert_size)
+        for replicon, coverages in sorted(coverage.calc_coverages(
+                lib.bam_file)):
             for strand in strand_dict:
                 if strand == "-":
                     factor = -1.0/size_factor
@@ -497,8 +506,7 @@ class PredefinedPeakApproach(object):
                 try:
                     wiggle_writers[strand_dict[
                         strand]].write_replicons_coverages(
-                            replicon, lib.replicon_dict[replicon]["coverages"][
-                                strand], factor=factor)
+                            replicon, coverages[strand], factor=factor)
                 except Exception as exc:
                     print("Library %s, replicon %s, %s strand generated an "
                           "exception during coverage file generation: %s" %
