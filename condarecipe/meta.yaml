@@ -21,6 +21,7 @@ requirements:
         - "bcbiogff >=0.6.2"
         - "statsmodels >=0.6.1"
         - "rpy2 >=2.7.6"
+        - bx-python
     run:
         - python
         - setuptools
@@ -32,6 +33,7 @@ requirements:
         - "bcbiogff >=0.6.2"
         - "statsmodels >=0.6.1"
         - "rpy2 >=2.7.6"
+        - bx-python
         - bioconductor-deseq2
         - bioconductor-edger
         - blockbuster
