@@ -1,6 +1,6 @@
 import pysam
 import numpy as np
-from bx.intervals.intersection import Intersecter, Interval
+from peakachulib.intersection import Intersecter, Interval
 
 
 class ReadCounter(object):

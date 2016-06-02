@@ -2,6 +2,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+from distutils.extension import Extension
 
 setup(
     name='PEAKachu',
@@ -29,5 +30,6 @@ setup(
         'Operating System :: POSIX',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
-    ]
+    ],
+    ext_modules = [Extension("peakachulib.intersection", [ "peakachulib/intersection.pyx" ])]
 )

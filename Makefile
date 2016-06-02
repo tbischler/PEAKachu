@@ -2,7 +2,7 @@
 # PYTHONPATH.
 link_lib:
 	cd bin && ln -sf ../peakachulib && cd ..
-	cd tests && ln -sf ../peakachulib && cd ..
+	#cd tests && ln -sf ../peakachulib && cd ..
 
 readme_html:
 	pandoc --from=markdown --to=html README.md -o README.html
@@ -48,8 +48,9 @@ package:
 	rm -rf PEAKachu.egg-info
 	ls dist/*
 
-# test:
-# 	python3 tests/test_all.py
+test:
+	python3 setup.py build_ext --inplace
+	python3 tests/run_all_tests.py
 
 # coverage:
 # 	python3-coverage run tests/test_all.py
@@ -69,4 +70,3 @@ html_doc:
 
 # show_html_docs:
 # 	firefox docs/build/html/index.html &
-
