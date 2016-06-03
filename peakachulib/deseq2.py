@@ -19,7 +19,6 @@ class RunDESeq2(object):
     def run_deseq2(self):
         self._count_df = np.round(self._count_df, decimals=0)
         self._count_df = self._count_df.astype(int)
-        libs = self._exp_lib_list + self._ctr_lib_list
         conds = ["exp"] * len(self._exp_lib_list) + ["ctr"] * len(
             self._ctr_lib_list)
         if self._pairwise_replicates:
@@ -33,7 +32,6 @@ class RunDESeq2(object):
             colData = robjects.DataFrame(
                     {"conditions": robjects.StrVector(conds)})
             design = Formula('~ conditions')
-        colData.rownames = libs
         r_count_df = robjects.DataFrame(self._count_df)
         r_count_df.colnames = robjects.rinterface.NULL
         dds = r.DESeqDataSetFromMatrix(countData=r_count_df,
@@ -44,8 +42,8 @@ class RunDESeq2(object):
             assign_sf = r["sizeFactors<-"]
             dds = assign_sf(object=dds, value=robjects.FloatVector(
                 self._size_factors))
-        dds = r.estimateDispersions(dds)
-        dds = r.nbinomWaldTest(dds)
+        dds = r.estimateDispersions(dds, quiet=True)
+        dds = r.nbinomWaldTest(dds, quiet=True)
         size_factors = pd.Series(r.sizeFactors(dds),
                                  index=self._count_df.columns)
         results = r.results(dds, contrast=robjects.StrVector(
