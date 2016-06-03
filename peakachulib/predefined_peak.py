@@ -263,7 +263,7 @@ class PredefinedPeakApproach(object):
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
-            print(lib_name)
+            print(lib_name, flush=True)
             lib.count_reads_for_peaks()
         t_end = time()
         print("Peak read counting finished in %s seconds." % (t_end-t_start),

@@ -15,6 +15,7 @@ from concurrent import futures
 from peakachulib.library import Library
 from peakachulib.tmm import TMM
 from peakachulib.gtest import GTest
+from peakachulib.coverage import Coverage
 from peakachulib.wiggle import WiggleWriter
 from time import time
 from collections import OrderedDict
@@ -59,7 +60,8 @@ class WindowApproach(object):
                                  % lib_file)
                 sys.exit(1)
             self._lib_dict[splitext(basename(lib_file))[0]] = Library(
-                paired_end, max_insert_size, lib_file, self._replicon_dict)
+                paired_end, max_insert_size, lib_file,
+                deepcopy(self._replicon_dict))
         self._lib_names_list = list(self._lib_dict.keys())
         print("The following libraries were initialized:\n"
               "# Experiment libraries\n{0}\n"
@@ -69,22 +71,16 @@ class WindowApproach(object):
 
     def generate_window_counts(self):
         self._generate_windows()
-        # execute read counting in parallel
+        for lib in self._lib_dict.values():
+            for replicon in self._replicon_dict:
+                lib.replicon_dict[replicon]["window_list"
+                    ] = self._replicon_dict[replicon]["window_list"]
         print("** Window read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(lib.count_reads_for_windows):
-                lib.lib_name for lib in self._lib_dict.values()}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            try:
-                self._lib_dict[lib_name].replicon_dict = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (lib_name, exc),
-                      flush=True)
+        for lib_name, lib in self._lib_dict.items():
+            print(lib_name)
+            lib.count_reads_for_windows()
         t_end = time()
         print("Window read counting finished in %s seconds.\n" % (
             t_end-t_start), flush=True)
@@ -234,7 +230,7 @@ class WindowApproach(object):
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
-            print(lib_name)
+            print(lib_name, flush=True)
             lib.count_reads_for_peaks()
         t_end = time()
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
@@ -282,8 +278,9 @@ class WindowApproach(object):
                 for match in overlapping_features:
                     entry_dict = peak.copy()
                     entry_dict.update(match)
-                    output_df = output_df.append(pd.DataFrame(entry_dict,
-                        index=[0], columns=peak_columns+feature_columns),
+                    output_df = output_df.append(
+                        pd.DataFrame(entry_dict, index=[0],
+                                     columns=peak_columns+feature_columns),
                         ignore_index=True)
             output_df.to_csv(
                 "%s/peaks_%s.csv" % (self._output_folder, replicon),
@@ -353,14 +350,16 @@ class WindowApproach(object):
         t_start = time()
         with futures.ProcessPoolExecutor(
                 max_workers=self._max_proc) as executor:
-            future_to_lib_name = {executor.submit(
-                self._generate_normalized_wiggle_file_for_lib, lib,
-                size_factor, wiggle_folder
-            ): lib.lib_name for lib, size_factor in zip(
-                self._lib_dict.values(), self._size_factors)}
+            future_to_lib_name = {
+                executor.submit(
+                    self._generate_normalized_wiggle_file_for_lib, lib,
+                    size_factor, wiggle_folder):
+                lib.lib_name for lib, size_factor in zip(
+                    self._lib_dict.values(), self._size_factors)}
         for future in futures.as_completed(future_to_lib_name):
             lib_name = future_to_lib_name[future]
-            print("* Coverage files for library %s generated." % lib_name)
+            print("* Coverage files for library %s generated." % lib_name,
+                  flush=True)
         t_end = time()
         print("Coverage file generation finished in %s seconds." % (
             t_end-t_start), flush=True)
@@ -370,24 +369,24 @@ class WindowApproach(object):
         """Perform the coverage calculation for a given library."""
         strand_dict = {"+": "forward", "-": "reverse"}
         wiggle_writers = dict([(strand, WiggleWriter(
-            "%s_%s" % (lib.lib_name,
-                       strand),
-            open("%s/%s_div_by_%s_%s.wig" % (wiggle_folder, lib.lib_name,
-                                             size_factor, strand), "w")))
-            for strand in strand_dict.values()])
-        for replicon in sorted(self._replicon_dict):
-            for strand in strand_dict.keys():
+            "%s_%s" % (lib.lib_name, strand),
+            open("%s/%s_div_by_%s_%s.wig" % (
+                wiggle_folder, lib.lib_name, size_factor, strand),
+                "w"))) for strand in strand_dict.values()])
+        coverage = Coverage(lib.paired_end, lib.max_insert_size)
+        for replicon, coverages in sorted(coverage.calc_coverages(
+                lib.bam_file)):
+            for strand in strand_dict:
                 if strand == "-":
                     factor = -1.0/size_factor
                 else:
                     factor = 1.0/size_factor
                 try:
-                    wiggle_writers[
-                        strand_dict[strand]].write_replicons_coverages(
-                            replicon, lib.replicon_dict[
-                                replicon]["coverages"][strand], factor=factor)
+                    wiggle_writers[strand_dict[
+                        strand]].write_replicons_coverages(
+                            replicon, coverages[strand], factor=factor)
                 except Exception as exc:
-                    print("Library %s, replicon %s, %s strand generated an"
+                    print("Library %s, replicon %s, %s strand generated an "
                           "exception during coverage file generation: %s" %
                           (lib.lib_name, replicon, strand, exc), flush=True)
         for strand in strand_dict.values():

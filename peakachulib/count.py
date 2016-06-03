@@ -10,6 +10,20 @@ class ReadCounter(object):
         self._max_insert_size = max_insert_size
         self._bam_fh = pysam.Samfile(bam_file, "rb")
 
+    def count_reads_for_windows(self, replicon, strand, window_list):
+        self._interval_tree = Intersecter()
+        self._counts = np.array([0] * len(window_list))
+        for ind, window in enumerate(window_list):
+            self._interval_tree.add_interval(
+                Interval(window[0],
+                         window[1],
+                         value=ind,
+                         strand=strand))
+        if self._paired_end:
+            self._cache_read2(replicon)
+        self._count_reads(replicon)
+        return self._counts
+
     def count_reads_for_peaks(self, replicon, peak_list):
         self._interval_tree = Intersecter()
         self._counts = np.array([0] * len(peak_list))
