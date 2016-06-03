@@ -15,6 +15,7 @@ from concurrent import futures
 from peakachulib.library import Library
 from peakachulib.tmm import TMM
 from peakachulib.gtest import GTest
+from peakachulib.intersection import Intersecter, Interval
 from peakachulib.coverage import Coverage
 from peakachulib.wiggle import WiggleWriter
 from time import time
@@ -272,9 +273,12 @@ class WindowApproach(object):
                 drop=True, inplace=True)
             self._replicon_dict[replicon]["peak_df"]["peak_id"] = (
                 self._replicon_dict[replicon]["peak_df"].index + 1)
+            feature_tree = self._build_feature_tree(replicon)
             for peak in self._replicon_dict[replicon]["peak_df"].to_dict(
                     'records'):
-                overlapping_features = self._find_overlapping_features(peak)
+                overlapping_features = self._find_overlapping_features(
+                        peak,
+                        feature_tree)
                 for match in overlapping_features:
                     entry_dict = peak.copy()
                     entry_dict.update(match)
@@ -306,25 +310,35 @@ class WindowApproach(object):
             "%s/windows_after_prefiltering.csv" % (self._output_folder),
             sep='\t', index=False, encoding='utf-8')
 
-    def _find_overlapping_features(self, peak):
+    def _build_feature_tree(self, replicon):
+        interval_tree = Intersecter()
+        for feature in self._replicon_dict[replicon]["features"]:
+            interval_tree.add_interval(
+                Interval(feature["start"],
+                         feature["end"],
+                         value=feature,
+                         strand=feature["strand"]))
+        return interval_tree
+
+    def _find_overlapping_features(self, peak, feature_tree):
         overlapping_features = []
-        for feature in self._replicon_dict[peak["replicon"]]["features"]:
-            if not peak["peak_strand"] == feature["strand"]:
+        all_overlapping = feature_tree.find(peak["peak_start"],
+                                            peak["peak_end"])
+        for feature in all_overlapping:
+            if not peak["peak_strand"] == feature.strand:
                 continue
             overlap = self._get_overlap(peak["peak_start"], peak["peak_end"],
-                                        feature["start"], feature["end"])
-            if not overlap > 0:
-                continue
+                                        feature.start, feature.end)
             overlapping_features.append({
-                "feature_type": feature["type"],
-                "feature_start": feature["start"],
-                "feature_end": feature["end"],
-                "feature_strand": feature["strand"],
-                "feature_locus_tag": feature["locus_tag"],
-                "feature_name": feature["Name"],
-                "subfeature_type": feature["subfeature_type"] if (
-                    "subfeature_type" in feature) else None,
-                "feature_product": feature["product"],
+                "feature_type": feature.value["type"],
+                "feature_start": feature.start,
+                "feature_end": feature.end,
+                "feature_strand": feature.strand,
+                "feature_locus_tag": feature.value["locus_tag"],
+                "feature_name": feature.value["Name"],
+                "subfeature_type": feature.value["subfeature_type"] if (
+                    "subfeature_type" in feature.value) else None,
+                "feature_product": feature.value["product"],
                 "overlap_length": overlap})
         if not overlapping_features:
             overlapping_features.append({
