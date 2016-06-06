@@ -44,6 +44,7 @@ class Library(object):
             peak_counts = read_counter.count_reads_for_peaks(
                 replicon,
                 self.replicon_dict[replicon]["peak_df"].to_dict('records'))
+            del self.replicon_dict[replicon]["peak_df"]
             self.replicon_dict[replicon]["peak_counts"] = peak_counts
 
     def count_reads_for_windows(self):

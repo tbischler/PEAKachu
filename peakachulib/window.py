@@ -72,15 +72,14 @@ class WindowApproach(object):
 
     def generate_window_counts(self):
         self._generate_windows()
-        for lib in self._lib_dict.values():
-            for replicon in self._replicon_dict:
-                lib.replicon_dict[replicon]["window_list"
-                    ] = self._replicon_dict[replicon]["window_list"]
         print("** Window read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
-            print(lib_name)
+            print(lib_name, flush=True)
+            for replicon in self._replicon_dict:
+                lib.replicon_dict[replicon]["window_list"
+                    ] = self._replicon_dict[replicon]["window_list"]
             lib.count_reads_for_windows()
         t_end = time()
         print("Window read counting finished in %s seconds.\n" % (
@@ -184,10 +183,7 @@ class WindowApproach(object):
             # combined
             self._replicon_dict[replicon]["peak_df"] = pd.concat([
                 peak_df_forward, peak_df_reverse], axis=0, ignore_index=True)
-        for lib in self._lib_dict.values():
-            for replicon in self._replicon_dict:
-                lib.replicon_dict[replicon]["peak_df"] = self._replicon_dict[
-                    replicon]["peak_df"]
+
         self._generate_peak_counts()
 
         for replicon in sorted(self._replicon_dict):
@@ -232,6 +228,9 @@ class WindowApproach(object):
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
             print(lib_name, flush=True)
+            for replicon in self._replicon_dict:
+                lib.replicon_dict[replicon]["peak_df"] = self._replicon_dict[
+                    replicon]["peak_df"]
             lib.count_reads_for_peaks()
         t_end = time()
         print("Peak read counting finished in %s seconds." % (t_end-t_start),
