@@ -2,14 +2,10 @@ import sys
 from os.path import basename, splitext, isfile, exists
 from os import makedirs
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.robust.scale import mad
 import pandas as pd
-matplotlib.style.use('seaborn-colorblind')
-font = {'family': 'sans-serif', 'size': 7}
-matplotlib.rc('font', **font)
 from concurrent import futures
 from peakachulib.library import Library
 from peakachulib.coverage import Coverage
@@ -20,6 +16,12 @@ from time import time
 from collections import OrderedDict
 from subprocess import Popen, PIPE
 from copy import deepcopy
+
+matplotlib.use('Agg')
+matplotlib.style.use('seaborn-colorblind')
+font = {'family': 'sans-serif', 'size': 7}
+matplotlib.rc('font', **font)
+
 
 class PredefinedPeakApproach(object):
     '''
@@ -108,9 +110,14 @@ class PredefinedPeakApproach(object):
                                         "tag_id",
                                         "count",
                                         "strand"]]
+            # create blockbuster input folder if it does not exist
+            self._blockbuster_input_folder = "{}/blockbuster_input".format(
+                    self._output_folder)
+            if not exists(self._blockbuster_input_folder):
+                makedirs(self._blockbuster_input_folder)
             self._replicon_dict[replicon]["reads"].to_csv(
                 "{}/{}_sorted_reads_for_blockbuster.bed".format(
-                    self._output_folder, replicon),
+                    self._blockbuster_input_folder, replicon),
                 sep='\t', header=False, index=False, encoding='utf-8')
         t_end = time()
         print("Reads converted to bed format in %s seconds.\n" % (
@@ -140,8 +147,8 @@ class PredefinedPeakApproach(object):
             ["blockbuster.x", "-minBlockHeight", "10", "-print", "1",
              "-distance", "1",
              "{}/{}_sorted_reads_for_blockbuster.bed".format(
-                 self._output_folder, replicon)], stdout=PIPE, stderr=PIPE,
-            universal_newlines=True)
+                 self._blockbuster_input_folder, replicon)], stdout=PIPE,
+            stderr=PIPE, universal_newlines=True)
         output, error = p.communicate()
         returncode = p.returncode
         return {"output": output, "error": error, "returncode": returncode}
@@ -184,13 +191,15 @@ class PredefinedPeakApproach(object):
                 "peak_start", "peak_end"]), ignore_index=True)
         else:
             blocks = [block.strip().split('\t') for block in cluster["blocks"]]
-            block_df = pd.DataFrame(blocks, columns=["blockNb", "blockChrom",
-                "blockStart", "blockEnd", "blockStrand", "blockExpression",
-                "readCount"])
+            block_df = pd.DataFrame(
+                blocks, columns=["blockNb", "blockChrom", "blockStart",
+                                 "blockEnd", "blockStrand", "blockExpression",
+                                 "readCount"])
             block_df.loc[:, ["blockNb", "blockStart", "blockEnd",
-                "blockExpression", "readCount"]] = block_df.loc[:, ["blockNb",
-                "blockStart", "blockEnd", "blockExpression",
-                "readCount"]].apply(pd.to_numeric)
+                             "blockExpression", "readCount"]] = block_df.loc[
+                                 :, ["blockNb", "blockStart", "blockEnd",
+                                     "blockExpression", "readCount"]].apply(
+                                         pd.to_numeric)
             peak_df = self._split_cluster_peaks(block_df, cluster_expr,
                                                 peak_df, min_cluster_expr_frac,
                                                 min_block_overlap,
@@ -301,14 +310,18 @@ class PredefinedPeakApproach(object):
         sig_peak_df = self._filter_peaks(self._peak_df)
         unsig_peak_df = self._peak_df[~self._peak_df.index.isin(
             sig_peak_df.index)]
+        # plot peaks
+        print("* Plotting initial peaks...", flush=True)
+        t_start = time()
         self._plot_initial_peaks(unsig_peak_df.baseMean,
                                  np.power(2.0, unsig_peak_df.log2FoldChange),
                                  sig_peak_df.baseMean,
                                  np.power(2.0, sig_peak_df.log2FoldChange))
+        t_end = time()
+        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
         self._peak_df = sig_peak_df
 
     def run_analysis_without_control(self, size_factors):
-        count_df = self._peak_df.loc[:, self._exp_lib_list]
         self._size_factors = size_factors
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
@@ -378,6 +391,10 @@ class PredefinedPeakApproach(object):
         return df
 
     def write_output(self):
+        # create peak table folder if it does not exist
+        peak_table_folder = "{}/peak_tables".format(self._output_folder)
+        if not exists(peak_table_folder):
+            makedirs(peak_table_folder)
         peak_columns = (["replicon",
                          "peak_id",
                          "peak_start",
@@ -425,10 +442,11 @@ class PredefinedPeakApproach(object):
                         pd.DataFrame(entry_dict, index=[0],
                                      columns=peak_columns+feature_columns),
                         ignore_index=True)
+            # write peak table for replicon
             output_df.to_csv(
-                "%s/peaks_%s.csv" % (self._output_folder, replicon),
+                "%s/peaks_%s.csv" % (peak_table_folder, replicon),
                 sep='\t', na_rep='NA', index=False, encoding='utf-8')
-
+            # write peak gff file for replicon
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
 
@@ -476,6 +494,7 @@ class PredefinedPeakApproach(object):
         return overlapping_features
 
     def generate_normalized_wiggle_files(self):
+        # create normalized coverage folder if it does not exist
         wiggle_folder = "%s/normalized_coverage" % (self._output_folder)
         if not exists(wiggle_folder):
             makedirs(wiggle_folder)
@@ -529,8 +548,12 @@ class PredefinedPeakApproach(object):
             wiggle_writers[strand].close_file()
 
     def _write_gff_file(self, replicon, df):
-        with open("%s/peaks_%s.gff" % (self._output_folder, replicon),
-                  'w') as out_gff_fh:
+        # create peak annotation folder if it does not exist
+        peak_anno_folder = "{}/peak_annotations".format(self._output_folder)
+        if not exists(peak_anno_folder):
+            makedirs(peak_anno_folder)
+        with open("%s/peaks_%s.gff" % (
+                peak_anno_folder, replicon), 'w') as out_gff_fh:
             out_gff_fh.write("##gff-version 3\n"
                              "#!gff-spec-version 1.20\n"
                              "##sequence-region %s %s %s\n"
@@ -540,8 +563,8 @@ class PredefinedPeakApproach(object):
                                  self._replicon_dict[replicon]
                                  ['seq_start_pos'] + 1,
                                  self._replicon_dict[replicon]['seq_end_pos'],
-                                 '\n'.join(df.apply(
-                                     self._write_gff_entry, axis=1)),
+                                 '\n'.join(
+                                     df.apply(self._write_gff_entry, axis=1)),
                                  '\n' if not df.empty else ""))
 
     def _write_gff_entry(self, peak):
@@ -557,6 +580,10 @@ class PredefinedPeakApproach(object):
 
     def _plot_initial_peaks(self, unsig_base_means, unsig_fcs,
                             sig_base_means, sig_fcs):
+        # create plot folder if it does not exist
+        plot_folder = "{}/plots".format(self._output_folder)
+        if not exists(plot_folder):
+            makedirs(plot_folder)
         # MA plot
         plt.plot(np.log10(unsig_base_means),
                  np.log2(unsig_fcs), ".",
@@ -567,10 +594,10 @@ class PredefinedPeakApproach(object):
         plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
-        plt.title("MA_plot")
+        plt.title("Initial_peaks_MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
-        plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
+        plt.savefig("%s/Initial_peaks_MA_plot.png" % (plot_folder), dpi=600)
         plt.close()
         # HexBin plot
         df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
@@ -581,8 +608,8 @@ class PredefinedPeakApproach(object):
         plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
-        plt.title("HexBin_plot")
-        plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
+        plt.title("Initial_peaks_HexBin_plot")
+        plt.savefig("%s/Initial_peaks_HexBin_plot.pdf" % (plot_folder))
         plt.close()
 
     def _get_overlap(self, peak_start, peak_end, feature_start, feature_end):

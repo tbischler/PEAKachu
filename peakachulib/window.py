@@ -2,15 +2,11 @@ import sys
 from os.path import basename, splitext, isfile, exists
 from os import makedirs
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.robust.scale import mad
 from statsmodels.sandbox.stats.multicomp import multipletests
 import pandas as pd
-matplotlib.style.use('seaborn-colorblind')
-font = {'family': 'sans-serif', 'size': 7}
-matplotlib.rc('font', **font)
 from concurrent import futures
 from peakachulib.library import Library
 from peakachulib.tmm import TMM
@@ -21,6 +17,11 @@ from peakachulib.wiggle import WiggleWriter
 from time import time
 from collections import OrderedDict
 from copy import deepcopy
+
+matplotlib.use('Agg')
+matplotlib.style.use('seaborn-colorblind')
+font = {'family': 'sans-serif', 'size': 7}
+matplotlib.rc('font', **font)
 
 
 class WindowApproach(object):
@@ -78,8 +79,9 @@ class WindowApproach(object):
         for lib_name, lib in self._lib_dict.items():
             print(lib_name, flush=True)
             for replicon in self._replicon_dict:
-                lib.replicon_dict[replicon]["window_list"
-                    ] = self._replicon_dict[replicon]["window_list"]
+                lib.replicon_dict[replicon][
+                    "window_list"] = self._replicon_dict[replicon][
+                        "window_list"]
             lib.count_reads_for_windows()
         t_end = time()
         print("Window read counting finished in %s seconds.\n" % (
@@ -223,7 +225,7 @@ class WindowApproach(object):
                             "peak_df"].loc[:, self._ctr_lib_list].sum(axis=1))
 
     def _generate_peak_counts(self):
-        print("** Peak read counting started for %s libraries..." % len(
+        print("* Peak read counting started for %s libraries..." % len(
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
@@ -237,6 +239,10 @@ class WindowApproach(object):
               flush=True)
 
     def write_output(self):
+        # create peak table folder if it does not exist
+        peak_table_folder = "{}/peak_tables".format(self._output_folder)
+        if not exists(peak_table_folder):
+            makedirs(peak_table_folder)
         peak_columns = (["replicon",
                          "peak_id",
                          "peak_start",
@@ -285,29 +291,13 @@ class WindowApproach(object):
                         pd.DataFrame(entry_dict, index=[0],
                                      columns=peak_columns+feature_columns),
                         ignore_index=True)
+            # write peak table for replicon
             output_df.to_csv(
-                "%s/peaks_%s.csv" % (self._output_folder, replicon),
+                "%s/peaks_%s.csv" % (peak_table_folder, replicon),
                 sep='\t', na_rep='NA', index=False, encoding='utf-8')
-
+            # write peak gff file for replicon
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
-        # plot windows
-        print("Plotting normalized windows...", flush=True)
-        t_start = time()
-        unsig_window_df = self._initial_window_df[
-            ~self._initial_window_df.index.isin(self._window_df.index)]
-        self._plot_initial_windows(unsig_window_df.base_means,
-                                   unsig_window_df.fold_change,
-                                   self._window_df.base_means,
-                                   self._window_df.fold_change)
-        t_end = time()
-        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
-
-        if self._window_df.empty:
-            return
-        self._window_df.to_csv(
-            "%s/windows_after_prefiltering.csv" % (self._output_folder),
-            sep='\t', index=False, encoding='utf-8')
 
     def _build_feature_tree(self, replicon):
         interval_tree = Intersecter()
@@ -353,10 +343,10 @@ class WindowApproach(object):
         return overlapping_features
 
     def generate_normalized_wiggle_files(self):
+        # create normalized coverage folder if it does not exist
         wiggle_folder = "%s/normalized_coverage" % (self._output_folder)
         if not exists(wiggle_folder):
             makedirs(wiggle_folder)
-
         # Generate coverage files in parallel
         print("** Generating normalized coverage files for %s libraries..." %
               (len(self._lib_dict)), flush=True)
@@ -406,8 +396,12 @@ class WindowApproach(object):
             wiggle_writers[strand].close_file()
 
     def _write_gff_file(self, replicon, df):
+        # create peak annotation folder if it does not exist
+        peak_anno_folder = "{}/peak_annotations".format(self._output_folder)
+        if not exists(peak_anno_folder):
+            makedirs(peak_anno_folder)
         with open("%s/peaks_%s.gff" % (
-                self._output_folder, replicon), 'w') as out_gff_fh:
+                peak_anno_folder, replicon), 'w') as out_gff_fh:
             out_gff_fh.write("##gff-version 3\n"
                              "#!gff-spec-version 1.20\n"
                              "##sequence-region %s %s %s\n"
@@ -535,9 +529,30 @@ class WindowApproach(object):
         print("* Filtering windows...", flush=True)
         self._initial_window_df = self._window_df.copy()
         self._window_df = self._filter_windows_df(self._window_df)
+        # plot windows
+        print("* Plotting normalized windows...", flush=True)
+        t_start = time()
+        unsig_window_df = self._initial_window_df[
+            ~self._initial_window_df.index.isin(self._window_df.index)]
+        self._plot_initial_windows(unsig_window_df.base_means,
+                                   unsig_window_df.fold_change,
+                                   self._window_df.base_means,
+                                   self._window_df.fold_change)
+        t_end = time()
+        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
+
+        if self._window_df.empty:
+            return
+        self._window_df.to_csv(
+            "%s/windows_after_prefiltering.csv" % (self._output_folder),
+            sep='\t', index=False, encoding='utf-8')
 
     def _plot_initial_windows(self, unsig_base_means, unsig_fcs,
                               sig_base_means, sig_fcs):
+        # create plot folder if it does not exist
+        plot_folder = "{}/plots".format(self._output_folder)
+        if not exists(plot_folder):
+            makedirs(plot_folder)
         # MA plot
         plt.plot(np.log10(unsig_base_means),
                  np.log2(unsig_fcs), ".",
@@ -548,10 +563,10 @@ class WindowApproach(object):
         plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
-        plt.title("MA_plot")
+        plt.title("Initial_windows_MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
-        plt.savefig("%s/MA_plot.png" % (self._output_folder), dpi=600)
+        plt.savefig("%s/Initial_windows_MA_plot.png" % (plot_folder), dpi=600)
         plt.close()
         # HexBin plot
         df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
@@ -562,8 +577,8 @@ class WindowApproach(object):
         plt.axhline(y=np.median(np.log2(unsig_fcs.append(sig_fcs))))
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
-        plt.title("HexBin_plot")
-        plt.savefig("%s/HexBin_plot.pdf" % (self._output_folder))
+        plt.title("Initial_windows_HexBin_plot")
+        plt.savefig("%s/Initial_windows_HexBin_plot.pdf" % (plot_folder))
         plt.close()
 
     def _filter_windows_df(self, df):
@@ -648,21 +663,20 @@ class WindowApproach(object):
     def _check_significance_with_repl(self, p_and_padj_values):
         replicate_G_p_values = pd.Series(p_and_padj_values[
             "replicate_G_p_values"].split('/')).astype('float')
-        if (p_and_padj_values.loc["heterogenous_G_p_value"]
-                >= self._het_p_val_threshold and
-                p_and_padj_values.loc["pooled_G_padj_value"]
-                < self._padj_threshold):
+        if (p_and_padj_values.loc["heterogenous_G_p_value"] >=
+            self._het_p_val_threshold and
+            p_and_padj_values.loc["pooled_G_padj_value"] <
+                self._padj_threshold):
             return True
-        if ((p_and_padj_values.loc[
-                "total_G_padj_value"] < self._padj_threshold)
-                and ((replicate_G_p_values <
-                      self._rep_pair_p_val_threshold).all())):
+        if (p_and_padj_values.loc["total_G_padj_value"] <
+            self._padj_threshold) and ((replicate_G_p_values <
+                                        self._rep_pair_p_val_threshold).all()):
             return True
         return False
 
     def _check_significance_without_repl(self, p_and_padj_values):
-        if (p_and_padj_values.loc["single_G_padj_value"]
-                < self._padj_threshold):
+        if (p_and_padj_values.loc["single_G_padj_value"] <
+                self._padj_threshold):
             return True
         return False
 
@@ -709,5 +723,5 @@ class WindowApproach(object):
 
     def _get_overlap(self, peak_start, peak_end, feature_start, feature_end):
         return max(0,
-                   min(peak_end, feature_end)
-                   - max(peak_start, feature_start) + 1)
+                   min(peak_end, feature_end) -
+                   max(peak_start, feature_start) + 1)
