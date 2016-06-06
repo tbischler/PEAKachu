@@ -3,17 +3,16 @@
 """Peak calling tool for CLIP-seq data"""
 import sys
 import argparse
+from peakachulib.controller import Controller
 from peakachulib.float_range import frac_float
-from peakachulib.replicons import Replicons
-from peakachulib.window import WindowApproach
-from peakachulib.predefined_peak import PredefinedPeakApproach
-from time import time
 
 __author__ = "Thorsten Bischler"
-__copyright__ = "2015 by Thorsten Bischler <thorsten.bischler@uni-wuerzburg.de>"
+__copyright__ = ("2016 by Thorsten Bischler"
+                 " <thorsten.bischler@uni-wuerzburg.de>")
 __license__ = "ISC license"
 __email__ = "thorsten.bischler@uni-wuerzburg.de"
 __version__ = "0.1dev"
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -29,10 +28,10 @@ def main():
     window_parser.set_defaults(func=window_approach)
     window_parser.add_argument('-t', "--exp_libs", nargs='+')
     window_parser.add_argument('-c', "--ctr_libs", nargs='+')
-    window_parser.add_argument('-r', "--pairwise_replicates",
-        action='store_true', default=False)
-    window_parser.add_argument('-P', "--paired_end", action='store_true',
-        default=False)
+    window_parser.add_argument(
+        '-r', "--pairwise_replicates", action='store_true', default=False)
+    window_parser.add_argument(
+        '-P', "--paired_end", action='store_true', default=False)
     window_parser.add_argument('-M', "--max_insert_size", type=int, default=50)
     window_parser.add_argument('-g', "--gff_folder", required=True)
     window_parser.add_argument("--features", nargs='*', default=[])
@@ -40,69 +39,86 @@ def main():
     window_parser.add_argument('-p', "--max_proc", type=int, default=1)
     window_parser.add_argument('-w', "--window_size", type=int, default=25)
     window_parser.add_argument('-l', "--step_size", type=int, default=5)
-    window_parser.add_argument('-n', "--norm_method", default="tmm",
+    window_parser.add_argument(
+        '-n', "--norm_method", default="tmm",
         choices=["tmm", "count", "manual", "none"])
-    window_parser.add_argument('-s', "--size_factors", type=float, nargs='*',
+    window_parser.add_argument(
+        '-s', "--size_factors", type=float, nargs='*',
         help="Normalization factors for libraries in input order (first "
         "experiment then control libraries)")
-    window_parser.add_argument('-m', "--mad_multiplier", type=float,
-        default=2.0)
-    window_parser.add_argument('-f', "--fc_cutoff", type=float, default=2.0)
-    window_parser.add_argument('-H', "--het_p_val_threshold", type=float,
-        default=0.01)
-    window_parser.add_argument('-R', "--rep_pair_p_val_threshold", type=float,
-        default=0.05)
-    window_parser.add_argument('-Q', "--padj_threshold", type=float,
-        default=0.05)
-    window_parser.add_argument('-N', "--norm_cov", action='store_true',
-        default=False, help="Generate normalized coverage wiggle files")
+    window_parser.add_argument(
+        '-m', "--mad_multiplier", type=float, default=2.0)
+    window_parser.add_argument(
+        '-f', "--fc_cutoff", type=float, default=2.0)
+    window_parser.add_argument(
+        '-H', "--het_p_val_threshold", type=float, default=0.01)
+    window_parser.add_argument(
+        '-R', "--rep_pair_p_val_threshold", type=float, default=0.05)
+    window_parser.add_argument(
+        '-Q', "--padj_threshold", type=float, default=0.05)
+    window_parser.add_argument(
+        '-N', "--norm_cov", action='store_true', default=False,
+        help="Generate normalized coverage wiggle files")
     window_parser.add_argument('-o', "--output_folder", default="./")
 
     # Arguments for predefined peak approach
-    predefined_peak_parser = subparsers.add_parser(
-        "predefined_peak", help="Define peaks using shape-dependent predefined "
-        "peaks based on experiment libraries and subsequent comparison to a "
-        "control")
-    predefined_peak_parser.set_defaults(func=predefined_peak_approach)
-    predefined_peak_parser.add_argument('-t', "--exp_libs", nargs='+')
-    predefined_peak_parser.add_argument('-c', "--ctr_libs", nargs='*',
+    adaptive_parser = subparsers.add_parser(
+        "adaptive", help="Define peaks using shape-dependent "
+        "predefined peaks based on experiment libraries and subsequent "
+        "comparison to a control")
+    adaptive_parser.set_defaults(func=adaptive_approach)
+    adaptive_parser.add_argument('-t', "--exp_libs", nargs='+')
+    adaptive_parser.add_argument('-c', "--ctr_libs", nargs='*',
                                         default=[])
-    predefined_peak_parser.add_argument('-r', "--pairwise_replicates",
-        action='store_true', default=False)
-    predefined_peak_parser.add_argument('-P', "--paired_end",
-        action='store_true', default=False)
-    predefined_peak_parser.add_argument('-M', "--max_insert_size", type=int,
-        default=50)
-    predefined_peak_parser.add_argument('-g', "--gff_folder", required=True)
-    predefined_peak_parser.add_argument("--features", nargs='*', default=[])
-    predefined_peak_parser.add_argument("--sub_features", nargs='*', default=[])
-    predefined_peak_parser.add_argument('-p', "--max_proc", type=int, default=1)
-    predefined_peak_parser.add_argument('-C', "--min_cluster_expr_frac",
-        type=frac_float, default=0.01,
+    adaptive_parser.add_argument('-r', "--pairwise_replicates",
+                                        action='store_true', default=False)
+    adaptive_parser.add_argument('-P', "--paired_end",
+                                        action='store_true', default=False)
+    adaptive_parser.add_argument('-M', "--max_insert_size", type=int,
+                                        default=50)
+    adaptive_parser.add_argument('-g', "--gff_folder", required=True)
+    adaptive_parser.add_argument("--features", nargs='*', default=[])
+    adaptive_parser.add_argument("--sub_features", nargs='*',
+                                        default=[])
+    adaptive_parser.add_argument('-p', "--max_proc", type=int,
+                                        default=1)
+    adaptive_parser.add_argument(
+        '-C', "--min_cluster_expr_frac", type=frac_float, default=0.01,
         help="Minimum fraction of the blockbuster cluster expression that a "
         "maximum block needs to have for further consideration")
-    predefined_peak_parser.add_argument('-O', "--min_block_overlap",
-        type=frac_float, default=0.5, help="Minimum fraction of "
+    adaptive_parser.add_argument(
+        '-O', "--min_block_overlap", type=frac_float, default=0.5,
+        help="Minimum fraction of "
         "the width of the current maximum block that has to overlap with a "
         "subblock to consider it for peak merging")
-    predefined_peak_parser.add_argument('-B', "--min_max_block_expr_frac",
-        type=frac_float, default=0.1,
+    adaptive_parser.add_argument(
+        '-B', "--min_max_block_expr_frac", type=frac_float, default=0.1,
         help="Minimum fraction of the expression of the current maximum block "
         "that a subblock needs to have to consider it for peak merging")
-    predefined_peak_parser.add_argument('-n', "--norm_method", default="deseq",
+    adaptive_parser.add_argument(
+        '-n', "--norm_method", default="deseq",
         choices=["deseq", "manual", "none"])
-    predefined_peak_parser.add_argument('-s', "--size_factors", type=float,
-        nargs='*', help="Normalization factors for libraries in input order "
+    adaptive_parser.add_argument(
+        '-s', "--size_factors", type=float, nargs='*',
+        help="Normalization factors for libraries in input order "
         "(first experiment then control libraries)")
-    predefined_peak_parser.add_argument('-m', "--mad_multiplier", type=float,
-        default=2.0)
-    predefined_peak_parser.add_argument('-f', "--fc_cutoff", type=float,
-        default=2.0)
-    predefined_peak_parser.add_argument('-Q', "--padj_threshold", type=float,
-        default=0.05)
-    predefined_peak_parser.add_argument('-N', "--norm_cov", action='store_true',
-        default=False, help="Generate normalized coverage wiggle files")
-    predefined_peak_parser.add_argument('-o', "--output_folder", default=".")
+    adaptive_parser.add_argument(
+        '-m', "--mad_multiplier", type=float, default=2.0)
+    adaptive_parser.add_argument(
+        '-f', "--fc_cutoff", type=float, default=2.0)
+    adaptive_parser.add_argument(
+        '-Q', "--padj_threshold", type=float, default=0.05)
+    adaptive_parser.add_argument(
+        '-N', "--norm_cov", action='store_true', default=False,
+        help="Generate normalized coverage wiggle files")
+    adaptive_parser.add_argument('-o', "--output_folder", default=".")
+
+    # Arguments for consenus peak generation
+    consensus_peak_parser = subparsers.add_parser(
+        "consensus_peak", help="Plot consensus peak for previously called "
+        "peaks based on coverage files")
+    consensus_peak_parser.set_defaults(func=adaptive_approach)
+    consensus_peak_parser.add_argument("--project_folder")
 
     try:
         args = parser.parse_args()
@@ -111,198 +127,19 @@ def main():
     if args.version is True:
                 print("PEAKachu version " + __version__)
     elif "func" in dir(args):
-        args.func(args)
+        controller = Controller(args)
+        args.func(controller)
     else:
         parser.print_help()
 
-def window_approach(args):
-    '''
-    This function initiates the peak detection via the sliding window approach
-    '''
-    assert(len(args.exp_libs) == len(args.ctr_libs))
-    replicate_count = len(args.exp_libs)
-    assert(args.step_size <= args.window_size)
-    print("Selected normalization method is: %s" % args.norm_method)
-    if args.norm_method == "manual":
-        if not (len(args.size_factors) == (replicate_count * 2)):
-            sys.stderr.write(
-                    "Normalization factors do not match library number!\n")
-            sys.exit(1)
-        size_factors = [value/max(args.size_factors)
-                        for value in args.size_factors]
-    elif args.norm_method == "none":
-        if args.size_factors:
-            sys.stderr.write("Specified size factors were ignored!\n")
-        size_factors = [1.0] * (replicate_count * 2)
-    else:
-        if args.size_factors:
-            sys.stderr.write("Specified size factors were ignored!\n")
-        size_factors = None
-    replicons = Replicons(args.ctr_libs, args.exp_libs, args.gff_folder,
-                          args.features, args.sub_features)
-    print("** Initiating replicons and reading annotations from .gff files...",
-          flush=True)
-    t_start = time()
-    replicons.init_replicons()
-    t_end = time()
-    print("Finished replicon initialization in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    window = WindowApproach(
-            args.window_size,
-            args.step_size,
-            replicons.replicon_dict,
-            args.max_proc,
-            args.norm_method,
-            size_factors,
-            args.het_p_val_threshold,
-            args.rep_pair_p_val_threshold,
-            args.padj_threshold,
-            args.mad_multiplier,
-            args.fc_cutoff,
-            args.pairwise_replicates,
-            args.output_folder)
-    print("** Initializing libraries...",
-          flush=True)
-    t_start = time()
-    window.init_libraries(
-            args.paired_end,
-            args.max_insert_size,
-            args.ctr_libs,
-            args.exp_libs)
-    t_end = time()
-    print("Finished library initialization in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    window.generate_window_counts()
-    print("** Performing G-test for all windows...", flush=True)
-    t_start = time()
-    if replicate_count > 1:
-        print("* Running in replicate-mode...", flush=True)
-        if args.pairwise_replicates:
-            print("  Experiment and control libraries are treated as pairs "
-                  "according to input order.")
-        else:
-            print("  All combinations of experiment and control library pairs"
-                  " that include all libraries are tested and the result with"
-                  " lowest significance is selected.")
-        window.perform_g_test_with_repl_for_windows()
-    else:
-        print("* Running in without-replicate-mode...", flush=True)
-        window.perform_g_test_without_repl_for_windows()
-    t_end = time()
-    print("G-test finished in %s seconds.\n" % (t_end-t_start), flush=True)
-    print("** Merging windows to peaks and recalculating values...", flush=True)
-    t_start = time()
-    window.combine_peaks_and_recalculate_values()
-    t_end = time()
-    print("Peak generation finished in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    print("** Writing peak output files...", flush=True)
-    t_start = time()
-    window.write_output()
-    t_end = time()
-    print("Writing output files took %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    if args.norm_cov:
-        window.generate_normalized_wiggle_files()
 
-def predefined_peak_approach(args):
-    '''
-    This function initiates the peak detection via the predefined peak
-    approach
-    '''
-    lib_count = len(args.exp_libs) + len(args.ctr_libs)
-    print("Selected normalization method is: %s" % args.norm_method)
-    if args.norm_method == "manual":
-        if not (len(args.size_factors) == (lib_count)):
-            sys.stderr.write(
-                    "Normalization factors do not match library number!\n")
-            sys.exit(1)
-        size_factors = [value/max(args.size_factors)
-                        for value in args.size_factors]
-    elif args.norm_method == "none" or not args.ctr_libs:
-        if args.size_factors:
-            sys.stderr.write("Specified size factors were ignored!\n")
-        size_factors = [1.0] * (lib_count)
-    else:
-        if args.size_factors:
-            sys.stderr.write("Specified size factors were ignored!\n")
-        size_factors = None
-    replicons = Replicons(args.ctr_libs, args.exp_libs, args.gff_folder,
-                          args.features, args.sub_features)
-    print("** Initiating replicons and reading annotations from .gff files...",
-          flush=True)
-    t_start = time()
-    replicons.init_replicons()
-    t_end = time()
-    print("Finished replicon initialization in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    predefined_peak = PredefinedPeakApproach(
-            replicons.replicon_dict,
-            args.max_proc,
-            args.padj_threshold,
-            args.mad_multiplier,
-            args.fc_cutoff,
-            args.output_folder)
-    print("** Initializing libraries...",
-          flush=True)
-    t_start = time()
-    predefined_peak.init_libraries(
-            args.paired_end,
-            args.max_insert_size,
-            args.ctr_libs,
-            args.exp_libs)
-    t_end = time()
-    print("Finished library initialization in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    predefined_peak.generate_combined_bed_file()
-    print("** Running blockbuster...",
-          flush=True)
-    t_start = time()
-    predefined_peak.run_blockbuster()
-    t_end = time()
-    print("blockbuster finished in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    print("** Generating peaks from blockbuster output...",
-          flush=True)
-    t_start = time()
-    predefined_peak.generate_peaks_from_blockbuster(args.min_cluster_expr_frac,
-        args.min_block_overlap,
-        args.min_max_block_expr_frac)
-    t_end = time()
-    print("Peak generation finished in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    print("** Calculating peak expression...",
-          flush=True)
-    t_start = time()
-    predefined_peak.calculate_peak_expression()
-    t_end = time()
-    print("Peak expression calculated in %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    if args.ctr_libs:
-        print("** Calculating peak significance with DESeq2...",
-              flush=True)
-        t_start = time()
-        predefined_peak.run_deseq2_analysis(size_factors,
-                                            args.pairwise_replicates)
-        t_end = time()
-        print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
-                flush=True)
-    else:
-        print("** Calculating peaks without control...",
-                flush=True)
-        t_start = time()
-        predefined_peak.run_analysis_without_control(size_factors)
-        t_end = time()
-        print("Peak calculation finished in %s seconds.\n" % (t_end-t_start),
-                flush=True)
-    print("** Writing peak output files...", flush=True)
-    t_start = time()
-    predefined_peak.write_output()
-    t_end = time()
-    print("Writing output files took %s seconds.\n" % (t_end-t_start),
-            flush=True)
-    if args.norm_cov:
-        predefined_peak.generate_normalized_wiggle_files()
+def window_approach(controller):
+    controller.window_approach()
+
+
+def adaptive_approach(controller):
+    controller.adaptive_approach()
+
 
 if __name__ == "__main__":
-   sys.exit(main())
+    sys.exit(main())

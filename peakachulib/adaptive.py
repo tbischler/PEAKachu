@@ -23,7 +23,7 @@ font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
 
 
-class PredefinedPeakApproach(object):
+class AdaptiveApproach(object):
     '''
     This class is used for peak detection via predefining peaks based on shape
     and subsequent comparison to a control
@@ -36,7 +36,7 @@ class PredefinedPeakApproach(object):
         self._padj_threshold = padj_threshold
         self._mad_multiplier = mad_multiplier
         self._fc_cutoff = fc_cutoff
-        self._output_folder = output_folder + "/predefined_peak_approach"
+        self._output_folder = output_folder
         if not exists(self._output_folder):
             makedirs(self._output_folder)
 
@@ -449,6 +449,7 @@ class PredefinedPeakApproach(object):
             # write peak gff file for replicon
             self._write_gff_file(replicon, self._replicon_dict[replicon]
                                  ["peak_df"])
+        del self._peak_df
 
     def _build_feature_tree(self, replicon):
         interval_tree = Intersecter()

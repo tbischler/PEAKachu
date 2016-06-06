@@ -45,7 +45,7 @@ class WindowApproach(object):
         self._mad_multiplier = mad_multiplier
         self._fc_cutoff = fc_cutoff
         self._pairwise_replicates = pairwise_replicates
-        self._output_folder = output_folder + "/window_approach"
+        self._output_folder = output_folder
         if not exists(self._output_folder):
             makedirs(self._output_folder)
 
