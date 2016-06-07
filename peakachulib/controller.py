@@ -209,4 +209,3 @@ class Controller(object):
               flush=True)
         if self._args.norm_cov:
             adaptive.generate_normalized_wiggle_files()
-        adaptive.plot_consensus_peak()
