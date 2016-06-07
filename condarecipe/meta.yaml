@@ -1,6 +1,6 @@
 package:
     name: peakachu
-    version: "0.0.1alpha0"
+    version: "0.0.1alpha1"
 
 source:
     path: ../
@@ -11,6 +11,7 @@ build:
 
 requirements:
     build:
+        - gcc
         - python
         - setuptools
         - "biopython >=1.66"
@@ -39,6 +40,7 @@ requirements:
 test:
     imports:
         - peakachulib
+        - peakachulib.intersection
     commands:
         - 'peakachu 2>&1 | grep "^usage" > /dev/null'
 ## the following requires tests, also the required files have to be made part of the distribution
