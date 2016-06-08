@@ -12,7 +12,7 @@ class Coverage(object):
     def calc_coverages(self, bam_file):
         self._bam_file = bam_file
         bam_fh = pysam.Samfile(self._bam_file, "rb")
-        for replicon, length in zip(bam_fh.references, bam_fh.lengths):
+        for replicon, length in sorted(zip(bam_fh.references, bam_fh.lengths)):
             self._init_coverage_list(length)
             if self._paired_end:
                 self._cache_read2(replicon, bam_fh)
@@ -39,7 +39,7 @@ class Coverage(object):
             self._coverages["-"][start:end] += 1.0
         else:
             self._coverages["+"][start:end] += 1.0
-            
+
     def _add_paired_end_coverage(self, aligned_read):
         if not aligned_read.is_read1:
             return
@@ -72,7 +72,7 @@ class Coverage(object):
             self._coverages["-"][start:end] += 1.0
         else:
             self._coverages["+"][start:end] += 1.0
-        
+
     def _cache_read2(self, replicon, bam_fh):
         self._read2_dict = {}
         for aligned_read in bam_fh.fetch(replicon):

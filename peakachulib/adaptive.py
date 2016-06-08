@@ -530,8 +530,7 @@ class AdaptiveApproach(object):
                 wiggle_folder, lib.lib_name, size_factor, strand),
                 "w"))) for strand in strand_dict.values()])
         coverage = Coverage(lib.paired_end, lib.max_insert_size)
-        for replicon, coverages in sorted(coverage.calc_coverages(
-                lib.bam_file)):
+        for replicon, coverages in coverage.calc_coverages(lib.bam_file):
             for strand in strand_dict:
                 if strand == "-":
                     factor = -1.0/size_factor
