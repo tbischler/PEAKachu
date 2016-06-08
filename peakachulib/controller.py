@@ -2,6 +2,7 @@ import sys
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
 from peakachulib.adaptive import AdaptiveApproach
+from peakachulib.consensus_peak import ConsensusPeakGenerator
 from time import time
 
 
@@ -209,3 +210,12 @@ class Controller(object):
               flush=True)
         if self._args.norm_cov:
             adaptive.generate_normalized_wiggle_files()
+
+    def consensus_peak(self):
+        '''
+        This function generates a consensus peak per library based on
+        previously called peaks and normalized coverage files
+        '''
+        consensus_peak_generator = ConsensusPeakGenerator(
+            self._args.project_folder, self._args.consensus_length)
+        consensus_peak_generator.plot_consensus_peak()

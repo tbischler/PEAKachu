@@ -117,8 +117,12 @@ def main():
     consensus_peak_parser = subparsers.add_parser(
         "consensus_peak", help="Plot consensus peak for previously called "
         "peaks based on coverage files")
-    consensus_peak_parser.set_defaults(func=adaptive_approach)
-    consensus_peak_parser.add_argument("--project_folder")
+    consensus_peak_parser.set_defaults(func=consensus_peak)
+    consensus_peak_parser.add_argument("project_folder")
+    consensus_peak_parser.add_argument(
+        '-l', "--consensus_length", type=int, default=100,
+        help="Length of the region around peak centers for plotting consensus "
+        "peaks")
 
     try:
         args = parser.parse_args()
@@ -139,6 +143,10 @@ def window_approach(controller):
 
 def adaptive_approach(controller):
     controller.adaptive_approach()
+
+
+def consensus_peak(controller):
+    controller.consensus_peak()
 
 
 if __name__ == "__main__":
