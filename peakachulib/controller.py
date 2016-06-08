@@ -43,16 +43,7 @@ class Controller(object):
             if self._args.size_factors:
                 sys.stderr.write("Specified size factors were ignored!\n")
             size_factors = None
-        replicons = Replicons(self._args.ctr_libs, self._args.exp_libs,
-                              self._args.gff_folder, self._args.features,
-                              self._args.sub_features)
-        print("** Initiating replicons and reading annotations from .gff "
-              "files...", flush=True)
-        t_start = time()
-        replicons.init_replicons()
-        t_end = time()
-        print("Finished replicon initialization in %s seconds.\n" % (
-            t_end-t_start), flush=True)
+        replicons = self._init_replicons()
         window = WindowApproach(
                 self._args.window_size,
                 self._args.step_size,
@@ -133,16 +124,7 @@ class Controller(object):
             if self._args.size_factors:
                 sys.stderr.write("Specified size factors were ignored!\n")
             size_factors = None
-        replicons = Replicons(self._args.ctr_libs, self._args.exp_libs,
-                              self._args.gff_folder, self._args.features,
-                              self._args.sub_features)
-        print("** Initiating replicons and reading annotations from .gff "
-              "files...", flush=True)
-        t_start = time()
-        replicons.init_replicons()
-        t_end = time()
-        print("Finished replicon initialization in %s seconds.\n" % (
-            t_end-t_start), flush=True)
+        replicons = self._init_replicons()
         adaptive = AdaptiveApproach(
                 replicons.replicon_dict,
                 self._args.max_proc,
@@ -219,3 +201,16 @@ class Controller(object):
         consensus_peak_generator = ConsensusPeakGenerator(
             self._args.project_folder, self._args.consensus_length)
         consensus_peak_generator.plot_consensus_peak()
+
+    def _init_replicons(self):
+        print("** Initializing replicons and reading annotations from .gff "
+              "files if present...", flush=True)
+        t_start = time()
+        replicons = Replicons(self._args.ctr_libs, self._args.exp_libs,
+                              self._args.gff_folder, self._args.features,
+                              self._args.sub_features)
+        replicons.init_replicons()
+        t_end = time()
+        print("Finished replicon initialization in %s seconds.\n" % (
+            t_end-t_start), flush=True)
+        return replicons

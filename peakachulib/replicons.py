@@ -9,12 +9,11 @@ class Replicons(object):
     def __init__(self, control_libs, tagged_libs, gff_folder, features,
                  sub_features):
         self._libs = control_libs + tagged_libs
-        self._gff_files = [join(gff_folder, f) for f in listdir(
-            gff_folder) if isfile(join(gff_folder, f))]
+        self._gff_folder = gff_folder
         self._limit_info = dict(gff_type=features)
         self._sub_features = sub_features
         self.replicon_dict = {}
-    
+
     def init_replicons(self):
         for bam_file in self._libs:
             bam_fh = pysam.Samfile(bam_file, "rb")
@@ -28,11 +27,7 @@ class Replicons(object):
                     "Mismatch in replicon content of bam files!\n")
                 sys.exit(1)
             self.replicon_dict = replicon_dict
-        if not self._gff_files:
-            sys.stderr.write("No .gff file found in specified folder")
-        for gff_file in self._gff_files:
-            self._store_annotations(gff_file)
-        
+        self._check_annotations()
         print("Peak detection will be conducted for the following sequence "
               "regions:", flush=True)
         for seq_id, replicon in sorted(self.replicon_dict.items()):
@@ -42,7 +37,19 @@ class Replicons(object):
                 replicon['seq_end_pos']), flush=True)
             if 'features' not in replicon:
                 replicon['features'] = []
-    
+
+    def _check_annotations(self):
+        if self._gff_folder is None:
+            print("No folder with .gff files specified")
+        else:
+            gff_files = [join(self._gff_folder, f) for f in listdir(
+                self._gff_folder) if isfile(join(self._gff_folder, f))]
+            if not gff_files:
+                print("No .gff file found in specified folder")
+            else:
+                for gff_file in gff_files:
+                    self._store_annotations(gff_file)
+
     def _store_annotations(self, gff_file):
         with open(gff_file) as gff_fh:
             for rec in GFF.parse(gff_fh, limit_info=self._limit_info):
@@ -80,4 +87,3 @@ class Replicons(object):
                                 'product' in subfeature.qualifiers) else None
                     self.replicon_dict[rec.id]['features'].append(
                         feature_entry)
-        

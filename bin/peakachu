@@ -26,14 +26,14 @@ def main():
         "window", help="Define peaks using a sliding window approach where "
         "experiment and control libraries are compared for each window")
     window_parser.set_defaults(func=window_approach)
-    window_parser.add_argument('-t', "--exp_libs", nargs='+')
-    window_parser.add_argument('-c', "--ctr_libs", nargs='+')
+    window_parser.add_argument('-t', "--exp_libs", nargs='+', required=True)
+    window_parser.add_argument('-c', "--ctr_libs", nargs='+', required=True)
     window_parser.add_argument(
         '-r', "--pairwise_replicates", action='store_true', default=False)
     window_parser.add_argument(
         '-P', "--paired_end", action='store_true', default=False)
     window_parser.add_argument('-M', "--max_insert_size", type=int, default=50)
-    window_parser.add_argument('-g', "--gff_folder", required=True)
+    window_parser.add_argument('-g', "--gff_folder")
     window_parser.add_argument("--features", nargs='*', default=[])
     window_parser.add_argument("--sub_features", nargs='*', default=[])
     window_parser.add_argument('-p', "--max_proc", type=int, default=1)
@@ -67,16 +67,15 @@ def main():
         "predefined peaks based on experiment libraries and subsequent "
         "comparison to a control")
     adaptive_parser.set_defaults(func=adaptive_approach)
-    adaptive_parser.add_argument('-t', "--exp_libs", nargs='+')
-    adaptive_parser.add_argument('-c', "--ctr_libs", nargs='*',
-                                        default=[])
+    adaptive_parser.add_argument('-t', "--exp_libs", nargs='+', required=True)
+    adaptive_parser.add_argument('-c', "--ctr_libs", nargs='*', default=[])
     adaptive_parser.add_argument('-r', "--pairwise_replicates",
                                         action='store_true', default=False)
     adaptive_parser.add_argument('-P', "--paired_end",
                                         action='store_true', default=False)
     adaptive_parser.add_argument('-M', "--max_insert_size", type=int,
                                         default=50)
-    adaptive_parser.add_argument('-g', "--gff_folder", required=True)
+    adaptive_parser.add_argument('-g', "--gff_folder")
     adaptive_parser.add_argument("--features", nargs='*', default=[])
     adaptive_parser.add_argument("--sub_features", nargs='*',
                                         default=[])

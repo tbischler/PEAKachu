@@ -607,7 +607,7 @@ class WindowApproach(object):
             axis=1), center=0.0)
         min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
         print("Minimal window expression based on mean over RIP/CLIP "
-              "libraries:" "%s (MAD from zero: %s)" % (
+              "libraries: %s (MAD from zero: %s)" % (
                   min_expr, median_abs_dev_from_zero), flush=True)
         df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
         t_end = time()
