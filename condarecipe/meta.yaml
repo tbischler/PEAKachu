@@ -1,16 +1,17 @@
 package:
     name: peakachu
-    version: "0.0.1"
+    version: "0.0.1alpha1"
 
 source:
     path: ../
 
 build:
-    number: 1
+    number: 0
     skip: True # [not py3k]
 
 requirements:
     build:
+        - gcc
         - python
         - setuptools
         - "biopython >=1.66"
@@ -21,7 +22,6 @@ requirements:
         - "bcbiogff >=0.6.2"
         - "statsmodels >=0.6.1"
         - "rpy2 >=2.7.6"
-        - bx-python
     run:
         - python
         - setuptools
@@ -33,7 +33,6 @@ requirements:
         - "bcbiogff >=0.6.2"
         - "statsmodels >=0.6.1"
         - "rpy2 >=2.7.6"
-        - bx-python
         - bioconductor-deseq2
         - bioconductor-edger
         - blockbuster
@@ -41,6 +40,7 @@ requirements:
 test:
     imports:
         - peakachulib
+        - peakachulib.intersection
     commands:
         - 'peakachu 2>&1 | grep "^usage" > /dev/null'
 ## the following requires tests, also the required files have to be made part of the distribution
