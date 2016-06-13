@@ -5,7 +5,7 @@ from scipy.stats import chisqprob
 
 
 class GTest(object):
-    
+
     def __init__(self, ctr_rep_counts, tagged_rep_counts,
                  pairwise_replicates=False):
         self._rep_df = pd.DataFrame({"ctr_counts": ctr_rep_counts,
@@ -15,13 +15,13 @@ class GTest(object):
         self._total_g_res = {}
         self._heterogenous_g_res = {}
         self._single_g_res = {}
-        
+
     def _olnf(self, obs, exp):
         return obs * np.log(obs/exp) if obs > 0.1 else 0
-    
+
     def _g_to_p_value(self, g_value, dof):
         return chisqprob(g_value, dof)
-    
+
     def _gtest(self, values):
         ctr_obs = values[0]
         tagged_obs = values[1]
@@ -29,7 +29,7 @@ class GTest(object):
         tagged_exp = 0.5 * (ctr_obs + tagged_obs)
         return 2 * (self._olnf(ctr_obs, ctr_exp) +
                     self._olnf(tagged_obs, tagged_exp))
-    
+
     def _pooled_gtest(self):
         self._pooled_g_res["dof"] = 1
         pooled_ctr = self._rep_df.loc[:, "ctr_counts"].sum()
@@ -39,7 +39,7 @@ class GTest(object):
         self._pooled_g_res["p_value"] = self._g_to_p_value(
             self._pooled_g_res["g_value"],
             self._pooled_g_res["dof"])
-    
+
     def _total_gtest(self):
         '''Use maximum over all g-value sums for all possible replicate
            combinations. Instead using the mean would also be possible!
@@ -64,7 +64,7 @@ class GTest(object):
         # Calculate p-value
         self._total_g_res["p_value"] = self._g_to_p_value(
             self._total_g_res["g_value"], self._total_g_res["dof"])
-        
+
     def _total_gtest_pairwise(self):
         '''Use only replicate pairs according to library input order
         '''
@@ -77,7 +77,7 @@ class GTest(object):
         # Calculate p-value
         self._total_g_res["p_value"] = self._g_to_p_value(
             self._total_g_res["g_value"], self._total_g_res["dof"])
-        
+
     def _heterogenous_gtest(self):
         self._heterogenous_g_res["g_value"] = (self._total_g_res["g_value"] -
                                                self._pooled_g_res["g_value"])
@@ -86,7 +86,7 @@ class GTest(object):
         self._heterogenous_g_res["p_value"] = self._g_to_p_value(
             self._heterogenous_g_res["g_value"],
             self._heterogenous_g_res["dof"])
-    
+
     def run_with_repl(self):
         self._pooled_gtest()
         (self._total_gtest_pairwise() if self._pairwise_replicates
@@ -97,7 +97,7 @@ class GTest(object):
                 "pooled_G_p_value": self._pooled_g_res["p_value"],
                 "total_G_p_value": self._total_g_res["p_value"],
                 "heterogenous_G_p_value": self._heterogenous_g_res["p_value"]}
-    
+
     def run_without_repl(self):
         self._single_g_res["dof"] = 1
         ctr = self._rep_df.loc[:, "ctr_counts"].sum()

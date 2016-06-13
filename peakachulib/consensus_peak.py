@@ -2,7 +2,6 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import pandas as pd
-import matplotlib
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from peakachulib.wiggle import WiggleParser

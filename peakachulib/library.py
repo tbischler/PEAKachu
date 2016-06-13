@@ -1,6 +1,5 @@
 from os.path import basename, splitext
 import pandas as pd
-from copy import deepcopy
 from peakachulib.bam_to_bed import BamToBed
 from peakachulib.count import ReadCounter
 

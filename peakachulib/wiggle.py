@@ -1,5 +1,3 @@
-import csv
-
 class WiggleParser(object):
     """
 
@@ -44,7 +42,7 @@ class WiggleParser(object):
     def _attrs_and_values(self, row):
         attrs_and_values = {}
         for attr_and_value in row:
-            if not "=" in attr_and_value:
+            if "=" not in attr_and_value:
                 continue
             attr, value = attr_and_value.split("=")
             value = value.replace("\"", "")
