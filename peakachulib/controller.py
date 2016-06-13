@@ -1,9 +1,16 @@
 import sys
+import matplotlib
+import matplotlib.pyplot as plt
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
 from peakachulib.adaptive import AdaptiveApproach
 from peakachulib.consensus_peak import ConsensusPeakGenerator
 from time import time
+
+matplotlib.use('Agg')
+plt.style.use('seaborn-colorblind')
+font = {'family': 'sans-serif', 'size': 7}
+matplotlib.rc('font', **font)
 
 
 class Controller(object):

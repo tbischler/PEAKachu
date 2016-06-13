@@ -1,7 +1,6 @@
 import sys
 from os.path import basename, splitext, isfile, exists
 from os import makedirs
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.robust.scale import mad
@@ -17,11 +16,6 @@ from peakachulib.wiggle import WiggleWriter
 from time import time
 from collections import OrderedDict
 from copy import deepcopy
-
-matplotlib.use('Agg')
-matplotlib.style.use('seaborn-colorblind')
-font = {'family': 'sans-serif', 'size': 7}
-matplotlib.rc('font', **font)
 
 
 class WindowApproach(object):

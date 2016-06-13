@@ -6,7 +6,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from peakachulib.wiggle import WiggleParser
-matplotlib.style.use('ggplot')
 
 
 class ConsensusPeakGenerator(object):
