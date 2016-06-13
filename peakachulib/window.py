@@ -179,7 +179,7 @@ class WindowApproach(object):
             # combined
             self._replicon_dict[replicon]["peak_df"] = pd.concat([
                 peak_df_forward, peak_df_reverse], axis=0, ignore_index=True)
-
+        del self._window_df
         self._generate_peak_counts()
 
         for replicon in sorted(self._replicon_dict):
@@ -441,6 +441,7 @@ class WindowApproach(object):
                         replicon]["window_counts"].loc[:, strand]))
                 self._window_df = self._window_df.append(df,
                                                          ignore_index=True)
+            del self._replicon_dict[replicon]["window_list"]
         # remove windows without expression in any library
         print("Removing empty windows from DataFrame with %s rows..." % len(
             self._window_df.index), flush=True)
