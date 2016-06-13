@@ -1,7 +1,6 @@
 from os.path import basename, splitext
 import pandas as pd
 from copy import deepcopy
-from peakachulib.coverage import Coverage
 from peakachulib.bam_to_bed import BamToBed
 from peakachulib.count import ReadCounter
 
@@ -17,12 +16,6 @@ class Library(object):
         self.max_insert_size = max_insert_size
         self.lib_name = splitext(basename(bam_file))[0]
         self.replicon_dict = replicon_dict
-        self._coverage_calculated = False
-
-    def _calc_coverage(self):
-        coverage = Coverage(self.paired_end, self.max_insert_size)
-        for replicon, coverages in coverage.calc_coverages(self.bam_file):
-            self.replicon_dict[replicon]["coverages"] = deepcopy(coverages)
 
     def _calc_window_expr(self):
         read_counter = ReadCounter(self.paired_end, self.max_insert_size,

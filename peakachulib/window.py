@@ -6,13 +6,11 @@ import numpy as np
 from statsmodels.robust.scale import mad
 from statsmodels.sandbox.stats.multicomp import multipletests
 import pandas as pd
-from concurrent import futures
+import json
 from peakachulib.library import Library
 from peakachulib.tmm import TMM
 from peakachulib.gtest import GTest
 from peakachulib.intersection import Intersecter, Interval
-from peakachulib.coverage import Coverage
-from peakachulib.wiggle import WiggleWriter
 from time import time
 from collections import OrderedDict
 from copy import deepcopy
@@ -45,6 +43,8 @@ class WindowApproach(object):
 
     def init_libraries(self, paired_end, max_insert_size, ctr_libs,
                        exp_libs):
+        self._paired_end = paired_end
+        self._max_insert_size = max_insert_size
         self._ctr_lib_list = [splitext(basename(lib_file))[0]
                               for lib_file in ctr_libs]
         self._exp_lib_list = [splitext(basename(lib_file))[0]
@@ -233,6 +233,8 @@ class WindowApproach(object):
               flush=True)
 
     def write_output(self):
+        # write parameters to json file
+        self._write_parameters()
         # create peak table folder if it does not exist
         peak_table_folder = "{}/peak_tables".format(self._output_folder)
         if not exists(peak_table_folder):
@@ -335,58 +337,6 @@ class WindowApproach(object):
                 "feature_product": None,
                 "overlap_length": None})
         return overlapping_features
-
-    def generate_normalized_wiggle_files(self):
-        # create normalized coverage folder if it does not exist
-        wiggle_folder = "%s/normalized_coverage" % (self._output_folder)
-        if not exists(wiggle_folder):
-            makedirs(wiggle_folder)
-        # Generate coverage files in parallel
-        print("** Generating normalized coverage files for %s libraries..." %
-              (len(self._lib_dict)), flush=True)
-        t_start = time()
-        with futures.ProcessPoolExecutor(
-                max_workers=self._max_proc) as executor:
-            future_to_lib_name = {
-                executor.submit(
-                    self._generate_normalized_wiggle_file_for_lib, lib,
-                    size_factor, wiggle_folder):
-                lib.lib_name for lib, size_factor in zip(
-                    self._lib_dict.values(), self._size_factors)}
-        for future in futures.as_completed(future_to_lib_name):
-            lib_name = future_to_lib_name[future]
-            print("* Coverage files for library %s generated." % lib_name,
-                  flush=True)
-        t_end = time()
-        print("Coverage file generation finished in %s seconds." % (
-            t_end-t_start), flush=True)
-
-    def _generate_normalized_wiggle_file_for_lib(self, lib, size_factor,
-                                                 wiggle_folder):
-        """Perform the coverage calculation for a given library."""
-        strand_dict = {"+": "forward", "-": "reverse"}
-        wiggle_writers = dict([(strand, WiggleWriter(
-            "%s_%s" % (lib.lib_name, strand),
-            open("%s/%s_div_by_%s_%s.wig" % (
-                wiggle_folder, lib.lib_name, size_factor, strand),
-                "w"))) for strand in strand_dict.values()])
-        coverage = Coverage(lib.paired_end, lib.max_insert_size)
-        for replicon, coverages in coverage.calc_coverages(lib.bam_file):
-            for strand in strand_dict:
-                if strand == "-":
-                    factor = -1.0/size_factor
-                else:
-                    factor = 1.0/size_factor
-                try:
-                    wiggle_writers[strand_dict[
-                        strand]].write_replicons_coverages(
-                            replicon, coverages[strand], factor=factor)
-                except Exception as exc:
-                    print("Library %s, replicon %s, %s strand generated an "
-                          "exception during coverage file generation: %s" %
-                          (lib.lib_name, replicon, strand, exc), flush=True)
-        for strand in strand_dict.values():
-            wiggle_writers[strand].close_file()
 
     def _write_gff_file(self, replicon, df):
         # create peak annotation folder if it does not exist
@@ -719,3 +669,16 @@ class WindowApproach(object):
         return max(0,
                    min(peak_end, feature_end) -
                    max(peak_start, feature_start) + 1)
+
+    def _write_parameters(self):
+        parameter_dict = {"max_insert_size": self._max_insert_size,
+                          "paired_end": self._paired_end,
+                          "libraries": {}}
+        for lib, size_factor in zip(
+                self._lib_dict.values(), self._size_factors):
+            parameter_dict["libraries"][lib.lib_name] = {
+                "bam_file": lib.bam_file,
+                "size_factor": size_factor}
+        with open("{}/parameters.json".format(self._output_folder),
+                  'w') as parameter_fh:
+            json.dump(parameter_dict, parameter_fh, indent=4, sort_keys=True)

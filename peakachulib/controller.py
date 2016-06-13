@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
 from peakachulib.adaptive import AdaptiveApproach
+from peakachulib.coverage import generate_normalized_wiggle_files
 from peakachulib.consensus_peak import ConsensusPeakGenerator
 from time import time
 
@@ -107,8 +108,6 @@ class Controller(object):
         t_end = time()
         print("Writing output files took %s seconds.\n" % (t_end-t_start),
               flush=True)
-        if self._args.norm_cov:
-            window.generate_normalized_wiggle_files()
 
     def adaptive_approach(self):
         '''
@@ -197,8 +196,14 @@ class Controller(object):
         t_end = time()
         print("Writing output files took %s seconds.\n" % (t_end-t_start),
               flush=True)
-        if self._args.norm_cov:
-            adaptive.generate_normalized_wiggle_files()
+
+    def coverage(self):
+        '''
+        This function generates normalized coverage files in wiggle format for
+        each library and strand
+        '''
+        generate_normalized_wiggle_files(
+            self._args.project_folder, self._args.max_proc)
 
     def consensus_peak(self):
         '''

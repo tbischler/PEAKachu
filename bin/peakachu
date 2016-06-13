@@ -56,9 +56,6 @@ def main():
         '-R', "--rep_pair_p_val_threshold", type=float, default=0.05)
     window_parser.add_argument(
         '-Q', "--padj_threshold", type=float, default=0.05)
-    window_parser.add_argument(
-        '-N', "--norm_cov", action='store_true', default=False,
-        help="Generate normalized coverage wiggle files")
     window_parser.add_argument('-o', "--output_folder", default="./")
 
     # Arguments for predefined peak approach
@@ -107,10 +104,15 @@ def main():
         '-f', "--fc_cutoff", type=float, default=2.0)
     adaptive_parser.add_argument(
         '-Q', "--padj_threshold", type=float, default=0.05)
-    adaptive_parser.add_argument(
-        '-N', "--norm_cov", action='store_true', default=False,
-        help="Generate normalized coverage wiggle files")
     adaptive_parser.add_argument('-o', "--output_folder", default=".")
+
+    # Arguments for normalized coverage generation
+    coverage_parser = subparsers.add_parser(
+        "coverage", help="Generate normalized coverage files in wiggle format "
+        "for each library and strand")
+    coverage_parser.set_defaults(func=coverage)
+    coverage_parser.add_argument("project_folder")
+    coverage_parser.add_argument('-p', "--max_proc", type=int, default=1)
 
     # Arguments for consenus peak generation
     consensus_peak_parser = subparsers.add_parser(
@@ -144,9 +146,12 @@ def adaptive_approach(controller):
     controller.adaptive_approach()
 
 
+def coverage(controller):
+    controller.coverage()
+
+
 def consensus_peak(controller):
     controller.consensus_peak()
-
 
 if __name__ == "__main__":
     sys.exit(main())
