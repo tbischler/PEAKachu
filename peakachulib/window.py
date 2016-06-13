@@ -67,8 +67,8 @@ class WindowApproach(object):
 
     def generate_window_counts(self):
         self._generate_windows()
-        print("** Window read counting started for {} libraries...".formatlen(
-            self._lib_dict), flush=True)
+        print("** Window read counting started for {} libraries...".format(len(
+            self._lib_dict)), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
             print(lib_name, flush=True)
@@ -219,8 +219,8 @@ class WindowApproach(object):
                             "peak_df"].loc[:, self._ctr_lib_list].sum(axis=1))
 
     def _generate_peak_counts(self):
-        print("* Peak read counting started for {} libraries...".formatlen(
-            self._lib_dict), flush=True)
+        print("* Peak read counting started for {} libraries...".format(len(
+            self._lib_dict)), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
             print(lib_name, flush=True)
@@ -535,7 +535,7 @@ class WindowApproach(object):
         # remove windows where not all experiment libs show expression:
         #   expression = 1/size_factor ( = pseudocount)
         print("Removing windows where not all experiment libs show "
-              "expression from DataFrame with {} rows...".formatlen(df),
+              "expression from DataFrame with {} rows...".format(len(df)),
               flush=True)
         t_start = time()
         for exp_lib in self._exp_lib_list:
@@ -548,7 +548,7 @@ class WindowApproach(object):
             return df
         # minimum expression cutoff based on mean over experiment libraries
         print("Removing windows based on mad cutoff from DataFrame "
-              "with {} rows...".formatlen(df), flush=True)
+              "with {} rows...".format(len(df)), flush=True)
         t_start = time()
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
             axis=1), center=0.0)
@@ -584,7 +584,7 @@ class WindowApproach(object):
             return df
         # minimum fold change
         print("Removing windows based on minimum fold change from DataFrame "
-              "with {} rows...".formatlen(df), flush=True)
+              "with {} rows...".format(len(df)), flush=True)
         t_start = time()
         df = df.query('fold_change >= @self._fc_cutoff')
         t_end = time()
