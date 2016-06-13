@@ -36,6 +36,7 @@ class Library(object):
                             self.replicon_dict[replicon]["window_list"])
                 self.replicon_dict[replicon]['window_counts'][
                     strand] = window_counts
+        read_counter.close_bam()
 
     def _calc_peak_expr(self):
         read_counter = ReadCounter(self.paired_end, self.max_insert_size,
@@ -46,6 +47,7 @@ class Library(object):
                 self.replicon_dict[replicon]["peak_df"].to_dict('records'))
             del self.replicon_dict[replicon]["peak_df"]
             self.replicon_dict[replicon]["peak_counts"] = peak_counts
+        read_counter.close_bam()
 
     def count_reads_for_windows(self):
         self._calc_window_expr()

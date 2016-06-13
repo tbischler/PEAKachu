@@ -38,6 +38,9 @@ class ReadCounter(object):
         self._count_reads(replicon)
         return self._counts
 
+    def close_bam(self):
+        self._bam_fh.close()
+
     def _count_reads(self, replicon):
         for aligned_read in self._bam_fh.fetch(replicon):
             if self._paired_end:

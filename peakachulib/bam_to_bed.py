@@ -16,6 +16,7 @@ class BamToBed(object):
                 self._cache_read2(replicon)
             self._calc_bed_reads(replicon)
             yield(replicon, self._bed_read_dict)
+        self._bam_fh.close()
 
     def _calc_bed_reads(self, replicon):
         for aligned_read in self._bam_fh.fetch(replicon):
@@ -33,7 +34,7 @@ class BamToBed(object):
             self._bed_read_dict["{0},{1},{2}".format(start, end, '-')] += 1
         else:
             self._bed_read_dict["{0},{1},{2}".format(start, end, '+')] += 1
-            
+
     def _add_paired_end_read(self, aligned_read):
         if not aligned_read.is_read1:
             return
@@ -66,7 +67,7 @@ class BamToBed(object):
             self._bed_read_dict["{0},{1},{2}".format(start, end, '-')] += 1
         else:
             self._bed_read_dict["{0},{1},{2}".format(start, end, '+')] += 1
-        
+
     def _cache_read2(self, replicon):
         self._read2_dict = {}
         for aligned_read in self._bam_fh.fetch(replicon):

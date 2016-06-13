@@ -10,14 +10,14 @@ class Coverage(object):
         self._coverages = {}
 
     def calc_coverages(self, bam_file):
-        self._bam_file = bam_file
-        bam_fh = pysam.Samfile(self._bam_file, "rb")
+        bam_fh = pysam.Samfile(bam_file, "rb")
         for replicon, length in sorted(zip(bam_fh.references, bam_fh.lengths)):
             self._init_coverage_list(length)
             if self._paired_end:
                 self._cache_read2(replicon, bam_fh)
             self._calc_coverage(replicon, bam_fh)
             yield(replicon, self._coverages)
+        bam_fh.close()
 
     def _init_coverage_list(self, length):
         for strand in ["+", "-"]:
