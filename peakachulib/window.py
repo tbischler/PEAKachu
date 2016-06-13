@@ -52,8 +52,8 @@ class WindowApproach(object):
         # add libs to lib_dict
         for lib_file in exp_libs + ctr_libs:
             if not isfile(lib_file):
-                sys.stderr.write("ERROR: The library file %s does not exist.\n"
-                                 % lib_file)
+                sys.stderr.write("ERROR: The library file {} does not exist.\n"
+                                 .format(lib_file))
                 sys.exit(1)
             self._lib_dict[splitext(basename(lib_file))[0]] = Library(
                 paired_end, max_insert_size, lib_file,
@@ -67,7 +67,7 @@ class WindowApproach(object):
 
     def generate_window_counts(self):
         self._generate_windows()
-        print("** Window read counting started for %s libraries..." % len(
+        print("** Window read counting started for {} libraries...".formatlen(
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
@@ -78,14 +78,14 @@ class WindowApproach(object):
                         "window_list"]
             lib.count_reads_for_windows()
         t_end = time()
-        print("Window read counting finished in %s seconds.\n" % (
+        print("Window read counting finished in {} seconds.\n".format(
             t_end-t_start), flush=True)
         print("** Generating data frames and filtering windows...", flush=True)
         t_start = time()
         self._convert_to_data_frame()
         t_end = time()
-        print("Data frame generation and filtering finished in %s seconds.\n"
-              % (t_end-t_start), flush=True)
+        print("Data frame generation and filtering finished in {} seconds.\n"
+              .format(t_end-t_start), flush=True)
 
     def _generate_windows(self):
         for replicon in self._replicon_dict:
@@ -219,7 +219,7 @@ class WindowApproach(object):
                             "peak_df"].loc[:, self._ctr_lib_list].sum(axis=1))
 
     def _generate_peak_counts(self):
-        print("* Peak read counting started for %s libraries..." % len(
+        print("* Peak read counting started for {} libraries...".formatlen(
             self._lib_dict), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
@@ -229,8 +229,8 @@ class WindowApproach(object):
                     replicon]["peak_df"]
             lib.count_reads_for_peaks()
         t_end = time()
-        print("Peak read counting finished in %s seconds." % (t_end-t_start),
-              flush=True)
+        print("Peak read counting finished in {} seconds.".format
+              (t_end-t_start), flush=True)
 
     def write_output(self):
         # write parameters to json file
@@ -289,7 +289,7 @@ class WindowApproach(object):
                         ignore_index=True)
             # write peak table for replicon
             output_df.to_csv(
-                "%s/peaks_%s.csv" % (peak_table_folder, replicon),
+                "{}/peaks_{}.csv".format(peak_table_folder, replicon),
                 sep='\t', na_rep='NA', index=False, encoding='utf-8')
             # write peak gff file for replicon
             self._write_gff_file(replicon, self._replicon_dict[replicon]
@@ -343,13 +343,13 @@ class WindowApproach(object):
         peak_anno_folder = "{}/peak_annotations".format(self._output_folder)
         if not exists(peak_anno_folder):
             makedirs(peak_anno_folder)
-        with open("%s/peaks_%s.gff" % (
+        with open("{}/peaks_{}.gff".format(
                 peak_anno_folder, replicon), 'w') as out_gff_fh:
             out_gff_fh.write("##gff-version 3\n"
                              "#!gff-spec-version 1.20\n"
-                             "##sequence-region %s %s %s\n"
-                             "%s%s"
-                             "###\n" % (
+                             "##sequence-region {} {} {}\n"
+                             "{}{}"
+                             "###\n".format(
                                  replicon,
                                  self._replicon_dict[replicon]
                                  ['seq_start_pos'] + 1,
@@ -359,7 +359,7 @@ class WindowApproach(object):
                                  '\n' if not df.empty else ""))
 
     def _write_gff_entry(self, peak):
-        return "%s\t%s\t%s\t%s\t%s\t.\t%s\t.\tID=%s:peak_%s" % (
+        return "{}\t{}\t{}\t{}\t{}\t.\t{}\t.\tID={}:peak_{}".format(
             peak["replicon"],
             "PEAKachu",
             "peak_region",
@@ -393,14 +393,14 @@ class WindowApproach(object):
                                                          ignore_index=True)
             del self._replicon_dict[replicon]["window_list"]
         # remove windows without expression in any library
-        print("Removing empty windows from DataFrame with %s rows..." % len(
-            self._window_df.index), flush=True)
+        print("Removing empty windows from DataFrame with {} rows...".format(
+            len(self._window_df.index)), flush=True)
         t_start = time()
         self._window_df = self._window_df.loc[
             (self._window_df.loc[:, self._lib_names_list].sum(axis=1) > 0), :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(self._window_df.index)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(self._window_df.index)), flush=True)
         if self._window_df.empty:
             print("**Dataframe empty**", flush=True)
             return
@@ -441,8 +441,8 @@ class WindowApproach(object):
         else:
             self._size_factors = pd.Series(self._size_factors,
                                            index=self._lib_names_list)
-        print("Size factors used for normalization\n%s" % (pd.Series.to_string(
-            self._size_factors)), flush=True)
+        print("Size factors used for normalization\n{}".format(
+            pd.Series.to_string(self._size_factors)), flush=True)
         # add pseudocounts
         self._window_df[self._lib_names_list] += 1.0
         # normalize counts
@@ -450,7 +450,8 @@ class WindowApproach(object):
             self._lib_names_list].div(
                 self._size_factors, axis='columns')
         t_end = time()
-        print("Normalization took %s seconds." % (t_end-t_start), flush=True)
+        print("Normalization took {} seconds.".format(t_end-t_start),
+              flush=True)
         # calculate base means for all windows
         print("Calculating base means and fold changes...", flush=True)
         t_start = time()
@@ -461,14 +462,14 @@ class WindowApproach(object):
             self._window_df.loc[:, self._exp_lib_list].sum(axis=1) /
             self._window_df.loc[:, self._ctr_lib_list].sum(axis=1))
         t_end = time()
-        print("Calculation took %s seconds." % (t_end-t_start), flush=True)
+        print("Calculation took {} seconds.".format(t_end-t_start), flush=True)
         # write raw windows to file
         print("Writing normalized windows to file...", flush=True)
         t_start = time()
-        self._window_df.to_csv("%s/raw_windows.csv" % (self._output_folder),
-                               sep='\t', index=False, encoding='utf-8')
+        self._window_df.to_csv("{}/raw_windows.csv".format(
+            self._output_folder), sep='\t', index=False, encoding='utf-8')
         t_end = time()
-        print("Writing took %s seconds." % (t_end-t_start), flush=True)
+        print("Writing took {} seconds.".format(t_end-t_start), flush=True)
         # filter windows
         print("* Filtering windows...", flush=True)
         self._initial_window_df = self._window_df.copy()
@@ -483,12 +484,12 @@ class WindowApproach(object):
                                    self._window_df.base_means,
                                    self._window_df.fold_change)
         t_end = time()
-        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
+        print("Plotting took {} seconds.".format(t_end-t_start), flush=True)
 
         if self._window_df.empty:
             return
         self._window_df.to_csv(
-            "%s/windows_after_prefiltering.csv" % (self._output_folder),
+            "{}/windows_after_prefiltering.csv".format(self._output_folder),
             sep='\t', index=False, encoding='utf-8')
 
     def _plot_initial_windows(self, unsig_base_means, unsig_fcs,
@@ -510,7 +511,8 @@ class WindowApproach(object):
         plt.title("Initial_windows_MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
-        plt.savefig("%s/Initial_windows_MA_plot.png" % (plot_folder), dpi=600)
+        plt.savefig("{}/Initial_windows_MA_plot.png".format(plot_folder),
+                    dpi=600)
         plt.close()
         # HexBin plot
         df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
@@ -522,7 +524,7 @@ class WindowApproach(object):
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
         plt.title("Initial_windows_HexBin_plot")
-        plt.savefig("%s/Initial_windows_HexBin_plot.pdf" % (plot_folder))
+        plt.savefig("{}/Initial_windows_HexBin_plot.pdf".format(plot_folder))
         plt.close()
 
     def _filter_windows_df(self, df):
@@ -533,36 +535,36 @@ class WindowApproach(object):
         # remove windows where not all experiment libs show expression:
         #   expression = 1/size_factor ( = pseudocount)
         print("Removing windows where not all experiment libs show "
-              "expression from DataFrame with %s rows..." % len(df),
+              "expression from DataFrame with {} rows...".formatlen(df),
               flush=True)
         t_start = time()
         for exp_lib in self._exp_lib_list:
             exp_lib_zero_count = 1/self._size_factors[exp_lib]
             df = df.loc[(df.loc[:, exp_lib] > exp_lib_zero_count), :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         if df.empty:
             return df
         # minimum expression cutoff based on mean over experiment libraries
         print("Removing windows based on mad cutoff from DataFrame "
-              "with %s rows..." % len(df), flush=True)
+              "with {} rows...".formatlen(df), flush=True)
         t_start = time()
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
             axis=1), center=0.0)
         min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
         print("Minimal window expression based on mean over RIP/CLIP "
-              "libraries: %s (MAD from zero: %s)" % (
+              "libraries: {} (MAD from zero: {})".format(
                   min_expr, median_abs_dev_from_zero), flush=True)
         df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         if df.empty:
             return df
         print("Removing windows where experiment expression is lower than "
-              "control expression from DataFrame with %s rows..." % len(df),
-              flush=True)
+              "control expression from DataFrame with {} rows...".format(
+                  len(df)), flush=True)
         t_start = time()
         if self._pairwise_replicates:
             # experiment expression must be larger than respective control
@@ -576,18 +578,18 @@ class WindowApproach(object):
             df = df.loc[df.loc[:, self._exp_lib_list].min(
                 axis=1) > df.loc[:, self._ctr_lib_list].max(axis=1), :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         if df.empty:
             return df
         # minimum fold change
         print("Removing windows based on minimum fold change from DataFrame "
-              "with %s rows..." % len(df), flush=True)
+              "with {} rows...".formatlen(df), flush=True)
         t_start = time()
         df = df.query('fold_change >= @self._fc_cutoff')
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         return df
 
     def _single_g_test(self, counts):

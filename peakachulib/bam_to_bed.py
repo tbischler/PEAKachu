@@ -48,10 +48,9 @@ class BamToBed(object):
             return
         try:
             mate = self._read2_dict[aligned_read.query_name.split()[0]]
-            # print("Mate found: %s" % mate)
         except KeyError:
             # Invalid mate (usually post-filtered)
-            print("Mate not found for read %s" % aligned_read)
+            print("Mate not found for read {}".format(aligned_read))
             return
         if not mate.is_read2:
             return

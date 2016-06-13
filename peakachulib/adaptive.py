@@ -44,8 +44,9 @@ class AdaptiveApproach(object):
         # add libs to lib_dict
         for lib_file in exp_libs + ctr_libs:
             if not isfile(lib_file):
-                sys.stderr.write("ERROR: The library file %s does not exist.\n"
-                                 % lib_file)
+                sys.stderr.write(
+                    "ERROR: The library file {} does not exist.\n".format(
+                        lib_file))
                 sys.exit(1)
             self._lib_dict[splitext(basename(lib_file))[0]] = Library(
                 paired_end, max_insert_size, lib_file,
@@ -59,8 +60,8 @@ class AdaptiveApproach(object):
 
     def generate_combined_bed_file(self):
         # execute read conversion in parallel
-        print("** Converting reads to bed format for %s libraries..." % len(
-            self._exp_lib_list), flush=True)
+        print("** Converting reads to bed format for {} libraries...".format(
+            len(self._exp_lib_list)), flush=True)
         exp_lib_dict = {lib_name: self._lib_dict[lib_name] for lib_name in
                         self._exp_lib_list}
         t_start = time()
@@ -74,7 +75,7 @@ class AdaptiveApproach(object):
             try:
                 self._lib_dict[lib_name].replicon_dict = future.result()
             except Exception as exc:
-                print('%r generated an exception: %s' % (lib_name, exc),
+                print("{} generated an exception: {}".format(lib_name, exc),
                       flush=True)
         for replicon in sorted(self._replicon_dict):
             self._replicon_dict[replicon]["reads"] = pd.Series()
@@ -115,7 +116,7 @@ class AdaptiveApproach(object):
                     self._blockbuster_input_folder, replicon),
                 sep='\t', header=False, index=False, encoding='utf-8')
         t_end = time()
-        print("Reads converted to bed format in %s seconds.\n" % (
+        print("Reads converted to bed format in {} seconds.\n".format(
             t_end-t_start), flush=True)
 
     def run_blockbuster(self):
@@ -133,7 +134,7 @@ class AdaptiveApproach(object):
             self._blockbuster_output += self._replicon_dict[replicon][
                 "blockbuster"]["output"]
             del self._replicon_dict[replicon]["blockbuster"]
-        with open("%s/blockbuster.txt" % (self._output_folder),
+        with open("{}/blockbuster.txt".format(self._output_folder),
                   'w') as blockbuster_fh:
             blockbuster_fh.write(self._blockbuster_output)
 
@@ -260,8 +261,8 @@ class AdaptiveApproach(object):
                 "peak_df"], ignore_index=True)
 
     def _generate_peak_counts(self):
-        print("** Peak read counting started for %s libraries..." % len(
-            self._lib_dict), flush=True)
+        print("** Peak read counting started for {} libraries...".format(
+            len(self._lib_dict)), flush=True)
         t_start = time()
         for lib_name, lib in self._lib_dict.items():
             print(lib_name, flush=True)
@@ -270,8 +271,8 @@ class AdaptiveApproach(object):
                     replicon]["peak_df"]
             lib.count_reads_for_peaks()
         t_end = time()
-        print("Peak read counting finished in %s seconds." % (t_end-t_start),
-              flush=True)
+        print("Peak read counting finished in {} seconds.".format(
+            t_end-t_start), flush=True)
 
     def run_deseq2_analysis(self, size_factors, pairwise_replicates):
         count_df = self._peak_df.loc[:, self._exp_lib_list +
@@ -298,7 +299,7 @@ class AdaptiveApproach(object):
                          "pvalue",
                          "padj"])
         self._peak_df.loc[:, peak_columns].to_csv(
-            "%s/initial_peaks.csv" % (self._output_folder),
+            "{}/initial_peaks.csv".format(self._output_folder),
             sep='\t', na_rep='NA', index=False, encoding='utf-8')
         # filter peaks
         print("* Filtering peaks...", flush=True)
@@ -313,7 +314,7 @@ class AdaptiveApproach(object):
                                  sig_peak_df.baseMean,
                                  np.power(2.0, sig_peak_df.log2FoldChange))
         t_end = time()
-        print("Plotting took %s seconds." % (t_end-t_start), flush=True)
+        print("Plotting took {} seconds.".format(t_end-t_start), flush=True)
         self._peak_df = sig_peak_df
 
     def run_analysis_without_control(self, size_factors):
@@ -328,7 +329,7 @@ class AdaptiveApproach(object):
                          "peak_strand"] +
                         [lib_name for lib_name in self._lib_dict])
         self._peak_df.loc[:, peak_columns].to_csv(
-            "%s/initial_peaks.csv" % (self._output_folder),
+            "{}/initial_peaks.csv".format(self._output_folder),
             sep='\t', na_rep='NA', index=False, encoding='utf-8')
         # filter peaks
         print("* Filtering peaks...", flush=True)
@@ -338,33 +339,33 @@ class AdaptiveApproach(object):
         # calculate mad for original data frame
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
             axis=1), center=0.0)
-        print("Removing peaks based on padj from DataFrame with %s rows..."
-              % len(df), flush=True)
+        print("Removing peaks based on padj from DataFrame with {} rows...".
+              format(len(df)), flush=True)
         t_start = time()
         df = df.query('padj < @self._padj_threshold')
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         # minimum expression cutoff based on mean over experiment libraries
         print("Removing peaks based on mad cutoff from DataFrame "
-              "with %s rows..." % len(df), flush=True)
+              "with {} rows...".format(len(df)), flush=True)
         t_start = time()
         min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
         print("Minimal peak expression based on mean over RIP/CLIP "
-              "libraries:" "%s (MAD from zero: %s)" % (
+              "libraries:" "{} (MAD from zero: {})".format(
                   min_expr, median_abs_dev_from_zero), flush=True)
         df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         print("Removing peaks based on minimum fold change "
-              "from DataFrame with %s rows..." % len(df), flush=True)
+              "from DataFrame with {} rows...".format(len(df)), flush=True)
         t_start = time()
         log2_fc_cutoff = np.log2(self._fc_cutoff)
         df = df.query('log2FoldChange >= @log2_fc_cutoff')
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         return df
 
     def _filter_peaks_without_control(self, df):
@@ -373,16 +374,16 @@ class AdaptiveApproach(object):
             axis=1), center=0.0)
         # minimum expression cutoff based on mean over experiment libraries
         print("Removing peaks based on mad cutoff from DataFrame "
-              "with %s rows..." % len(df), flush=True)
+              "with {} rows...".format(len(df)), flush=True)
         t_start = time()
         min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
         print("Minimal peak expression based on mean over RIP/CLIP "
-              "libraries:" "%s (MAD from zero: %s)" % (
+              "libraries:" "{} (MAD from zero: {})".format(
                   min_expr, median_abs_dev_from_zero), flush=True)
         df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
         t_end = time()
-        print("Removal took %s seconds. DataFrame contains now %s rows." % (
-            (t_end-t_start), len(df)), flush=True)
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
         return df
 
     def write_output(self):
@@ -441,7 +442,7 @@ class AdaptiveApproach(object):
                         ignore_index=True)
             # write peak table for replicon
             output_df.to_csv(
-                "%s/peaks_%s.csv" % (peak_table_folder, replicon),
+                "{}/peaks_{}.csv".format(peak_table_folder, replicon),
                 sep='\t', na_rep='NA', index=False, encoding='utf-8')
             # write peak gff file for replicon
             self._write_gff_file(replicon, self._replicon_dict[replicon]
@@ -496,13 +497,13 @@ class AdaptiveApproach(object):
         peak_anno_folder = "{}/peak_annotations".format(self._output_folder)
         if not exists(peak_anno_folder):
             makedirs(peak_anno_folder)
-        with open("%s/peaks_%s.gff" % (
+        with open("{}/peaks_{}.gff".format(
                 peak_anno_folder, replicon), 'w') as out_gff_fh:
             out_gff_fh.write("##gff-version 3\n"
                              "#!gff-spec-version 1.20\n"
-                             "##sequence-region %s %s %s\n"
-                             "%s%s"
-                             "###\n" % (
+                             "##sequence-region {} {} {}\n"
+                             "{}{}"
+                             "###\n".format(
                                  replicon,
                                  self._replicon_dict[replicon]
                                  ['seq_start_pos'] + 1,
@@ -512,7 +513,7 @@ class AdaptiveApproach(object):
                                  '\n' if not df.empty else ""))
 
     def _write_gff_entry(self, peak):
-        return "%s\t%s\t%s\t%s\t%s\t.\t%s\t.\tID=%s:peak_%s" % (
+        return "{}\t{}\t{}\t{}\t{}\t.\t{}\t.\tID={}:peak_{}".format(
             peak["replicon"],
             "PEAKachu",
             "peak_region",
@@ -541,7 +542,8 @@ class AdaptiveApproach(object):
         plt.title("Initial_peaks_MA_plot")
         plt.xlabel("log10 base mean")
         plt.ylabel("log2 fold-change")
-        plt.savefig("%s/Initial_peaks_MA_plot.png" % (plot_folder), dpi=600)
+        plt.savefig("{}/Initial_peaks_MA_plot.png".format(plot_folder),
+                    dpi=600)
         plt.close()
         # HexBin plot
         df = pd.DataFrame({'log10 base mean': np.log10(unsig_base_means.append(
@@ -553,7 +555,7 @@ class AdaptiveApproach(object):
         plt.axvline(x=np.median(np.log10(unsig_base_means.append(
                                          sig_base_means))))
         plt.title("Initial_peaks_HexBin_plot")
-        plt.savefig("%s/Initial_peaks_HexBin_plot.pdf" % (plot_folder))
+        plt.savefig("{}/Initial_peaks_HexBin_plot.pdf".format(plot_folder))
         plt.close()
 
     def _get_overlap(self, peak_start, peak_end, feature_start, feature_end):

@@ -35,7 +35,8 @@ class Controller(object):
         assert(len(self._args.exp_libs) == len(self._args.ctr_libs))
         replicate_count = len(self._args.exp_libs)
         assert(self._args.step_size <= self._args.window_size)
-        print("Selected normalization method is: %s" % self._args.norm_method)
+        print("Selected normalization method is: {}".format(
+            self._args.norm_method))
         if self._args.norm_method == "manual":
             if not (len(self._args.size_factors) == (replicate_count * 2)):
                 sys.stderr.write(
@@ -75,7 +76,7 @@ class Controller(object):
                 self._args.ctr_libs,
                 self._args.exp_libs)
         t_end = time()
-        print("Finished library initialization in %s seconds.\n" % (
+        print("Finished library initialization in {} seconds.\n".format(
             t_end-t_start), flush=True)
         window.generate_window_counts()
         print("** Performing G-test for all windows...", flush=True)
@@ -94,19 +95,20 @@ class Controller(object):
             print("* Running in without-replicate-mode...", flush=True)
             window.perform_g_test_without_repl_for_windows()
         t_end = time()
-        print("G-test finished in %s seconds.\n" % (t_end-t_start), flush=True)
+        print("G-test finished in {} seconds.\n".format(t_end-t_start),
+              flush=True)
         print("** Merging windows to peaks and recalculating values...",
               flush=True)
         t_start = time()
         window.combine_peaks_and_recalculate_values()
         t_end = time()
-        print("Peak generation finished in %s seconds.\n" % (t_end-t_start),
-              flush=True)
+        print("Peak generation finished in {} seconds.\n".format(
+            t_end-t_start), flush=True)
         print("** Writing peak output files...", flush=True)
         t_start = time()
         window.write_output()
         t_end = time()
-        print("Writing output files took %s seconds.\n" % (t_end-t_start),
+        print("Writing output files took {} seconds.\n".format(t_end-t_start),
               flush=True)
 
     def adaptive_approach(self):
@@ -114,7 +116,8 @@ class Controller(object):
         This function initiates the peak detection via the adaptive approach
         '''
         lib_count = len(self._args.exp_libs) + len(self._args.ctr_libs)
-        print("Selected normalization method is: %s" % self._args.norm_method)
+        print("Selected normalization method is: {}".format(
+            self._args.norm_method))
         if self._args.norm_method == "manual":
             if not (len(self._args.size_factors) == (lib_count)):
                 sys.stderr.write(
@@ -147,7 +150,7 @@ class Controller(object):
                 self._args.ctr_libs,
                 self._args.exp_libs)
         t_end = time()
-        print("Finished library initialization in %s seconds.\n" % (
+        print("Finished library initialization in {} seconds.\n".format(
             t_end-t_start), flush=True)
         adaptive.generate_combined_bed_file()
         print("** Running blockbuster...",
@@ -155,7 +158,7 @@ class Controller(object):
         t_start = time()
         adaptive.run_blockbuster()
         t_end = time()
-        print("blockbuster finished in %s seconds.\n" % (t_end-t_start),
+        print("blockbuster finished in {} seconds.\n".format(t_end-t_start),
               flush=True)
         print("** Generating peaks from blockbuster output...",
               flush=True)
@@ -164,15 +167,15 @@ class Controller(object):
             self._args.min_cluster_expr_frac, self._args.min_block_overlap,
             self._args.min_max_block_expr_frac)
         t_end = time()
-        print("Peak generation finished in %s seconds.\n" % (t_end-t_start),
-              flush=True)
+        print("Peak generation finished in {} seconds.\n".format(
+            t_end-t_start), flush=True)
         print("** Calculating peak expression...",
               flush=True)
         t_start = time()
         adaptive.calculate_peak_expression()
         t_end = time()
-        print("Peak expression calculated in %s seconds.\n" % (t_end-t_start),
-              flush=True)
+        print("Peak expression calculated in {} seconds.\n".format(
+            t_end-t_start), flush=True)
         if self._args.ctr_libs:
             print("** Calculating peak significance with DESeq2...",
                   flush=True)
@@ -180,7 +183,7 @@ class Controller(object):
             adaptive.run_deseq2_analysis(size_factors,
                                          self._args.pairwise_replicates)
             t_end = time()
-            print("DESeq2 finished in %s seconds.\n" % (t_end-t_start),
+            print("DESeq2 finished in {} seconds.\n".format(t_end-t_start),
                   flush=True)
         else:
             print("** Calculating peaks without control...",
@@ -188,13 +191,13 @@ class Controller(object):
             t_start = time()
             adaptive.run_analysis_without_control(size_factors)
             t_end = time()
-            print("Peak calculation finished in %s seconds.\n" % (
+            print("Peak calculation finished in {} seconds.\n".format(
                 t_end-t_start), flush=True)
         print("** Writing peak output files...", flush=True)
         t_start = time()
         adaptive.write_output()
         t_end = time()
-        print("Writing output files took %s seconds.\n" % (t_end-t_start),
+        print("Writing output files took {} seconds.\n".format(t_end-t_start),
               flush=True)
 
     def coverage(self):
@@ -223,6 +226,6 @@ class Controller(object):
                               self._args.sub_features)
         replicons.init_replicons()
         t_end = time()
-        print("Finished replicon initialization in %s seconds.\n" % (
+        print("Finished replicon initialization in {} seconds.\n".format(
             t_end-t_start), flush=True)
         return replicons

@@ -31,7 +31,7 @@ class Replicons(object):
         print("Peak detection will be conducted for the following sequence "
               "regions:", flush=True)
         for seq_id, replicon in sorted(self.replicon_dict.items()):
-            print("%s: %s %s" % (
+            print("{}: {} {}".format(
                 seq_id,
                 replicon['seq_start_pos'] + 1,
                 replicon['seq_end_pos']), flush=True)
@@ -55,8 +55,8 @@ class Replicons(object):
             for rec in GFF.parse(gff_fh, limit_info=self._limit_info):
                 if rec.id not in self.replicon_dict:
                     sys.stderr.write(
-                        "Annotations for sequence ID %s skipped as sequence"
-                        "is not present in alignment files!\n" % (rec.id))
+                        "Annotations for sequence ID {} skipped as sequence"
+                        "is not present in alignment files!\n".format(rec.id))
                     continue
                 if 'features' not in self.replicon_dict[rec.id]:
                     self.replicon_dict[rec.id]['features'] = []
