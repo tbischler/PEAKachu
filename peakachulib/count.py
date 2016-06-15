@@ -81,8 +81,12 @@ class ReadCounter(object):
             return
         # Note: No translation from SAMParser coordinates to python
         # list coorindates is needed.
-        start = aligned_read.reference_start
-        end = mate.reference_end
+        if aligned_read.is_reverse:
+            start = mate.reference_start
+            end = aligned_read.reference_end
+        else:
+            start = aligned_read.reference_start
+            end = mate.reference_end
         if end <= start:
             return
         if end - start > self._max_insert_size:
