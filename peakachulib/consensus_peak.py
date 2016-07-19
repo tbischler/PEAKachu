@@ -1,5 +1,6 @@
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, exists
+from os import makedirs
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -71,6 +72,10 @@ class ConsensusPeakGenerator(object):
             cons_values += np.array(value_list)
 
     def plot_consensus_peak(self):
+        # create plot folder if it does not exist
+        plot_folder = "{}/plots".format(self._project_folder)
+        if not exists(plot_folder):
+            makedirs(plot_folder)
         self._store_peaks()
         comb_cons_value_dict = self._get_peak_coverage()
         df = pd.DataFrame(comb_cons_value_dict, columns=sorted(

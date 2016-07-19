@@ -317,17 +317,60 @@ class AdaptiveApproach(object):
         print("Plotting took {} seconds.".format(t_end-t_start), flush=True)
         self._peak_df = sig_peak_df
 
-    def run_analysis_without_control(self, size_factors):
+    def run_analysis_without_replicates(self, size_factors):
         self._size_factors = size_factors
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
             self._lib_names_list].div(self._size_factors, axis='columns')
+        # calculate base means for all peaks
+        self._peak_df["base_means"] = self._peak_df.loc[
+            :, self._lib_names_list].mean(axis=1)
+        # calculate fcs for all peaks
+        self._peak_df["fold_change"] = (
+            self._peak_df.loc[:, self._exp_lib_list].sum(axis=1) /
+            self._peak_df.loc[:, self._ctr_lib_list].sum(axis=1))
         # write initial peaks
         peak_columns = (["replicon",
                          "peak_start",
                          "peak_end",
                          "peak_strand"] +
-                        [lib_name for lib_name in self._lib_dict])
+                        [lib_name for lib_name in self._lib_dict] +
+                        ["base_means",
+                         "fold_change"])
+        self._peak_df.loc[:, peak_columns].to_csv(
+            "{}/initial_peaks.csv".format(self._output_folder),
+            sep='\t', na_rep='NA', index=False, encoding='utf-8')
+        # filter peaks
+        print("* Filtering peaks...", flush=True)
+        sig_peak_df = self._filter_peaks_without_replicates(self._peak_df)
+        unsig_peak_df = self._peak_df[~self._peak_df.index.isin(
+            sig_peak_df.index)]
+        # plot peaks
+        print("* Plotting initial peaks...", flush=True)
+        t_start = time()
+        self._plot_initial_peaks(unsig_peak_df.base_means,
+                                 unsig_peak_df.fold_change,
+                                 sig_peak_df.base_means,
+                                 sig_peak_df.fold_change)
+        t_end = time()
+        print("Plotting took {} seconds.".format(t_end-t_start), flush=True)
+        self._peak_df = sig_peak_df
+
+    def run_analysis_without_control(self, size_factors):
+        self._size_factors = size_factors
+        # normalize counts
+        self._peak_df[self._lib_names_list] = self._peak_df[
+            self._lib_names_list].div(self._size_factors, axis='columns')
+        # calculate base means for all peaks
+        self._peak_df["base_means"] = self._peak_df.loc[
+            :, self._lib_names_list].mean(axis=1)
+        # write initial peaks
+        peak_columns = (["replicon",
+                         "peak_start",
+                         "peak_end",
+                         "peak_strand"] +
+                        [lib_name for lib_name in self._lib_dict] +
+                        ["base_means"])
         self._peak_df.loc[:, peak_columns].to_csv(
             "{}/initial_peaks.csv".format(self._output_folder),
             sep='\t', na_rep='NA', index=False, encoding='utf-8')
@@ -339,6 +382,7 @@ class AdaptiveApproach(object):
         # calculate mad for original data frame
         median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
             axis=1), center=0.0)
+        # padj filter
         print("Removing peaks based on padj from DataFrame with {} rows...".
               format(len(df)), flush=True)
         t_start = time()
@@ -346,6 +390,8 @@ class AdaptiveApproach(object):
         t_end = time()
         print("Removal took {} seconds. DataFrame contains now {} rows.".
               format((t_end-t_start), len(df)), flush=True)
+        if df.empty:
+            return df
         # minimum expression cutoff based on mean over experiment libraries
         print("Removing peaks based on mad cutoff from DataFrame "
               "with {} rows...".format(len(df)), flush=True)
@@ -358,11 +404,42 @@ class AdaptiveApproach(object):
         t_end = time()
         print("Removal took {} seconds. DataFrame contains now {} rows.".
               format((t_end-t_start), len(df)), flush=True)
+        if df.empty:
+            return df
+        # minimum fold change
         print("Removing peaks based on minimum fold change "
               "from DataFrame with {} rows...".format(len(df)), flush=True)
         t_start = time()
         log2_fc_cutoff = np.log2(self._fc_cutoff)
         df = df.query('log2FoldChange >= @log2_fc_cutoff')
+        t_end = time()
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
+        return df
+
+    def _filter_peaks_without_replicates(self, df):
+        # calculate mad for original data frame
+        median_abs_dev_from_zero = mad(df.loc[:, self._exp_lib_list].mean(
+            axis=1), center=0.0)
+        # minimum expression cutoff based on mean over experiment libraries
+        print("Removing peaks based on mad cutoff from DataFrame "
+              "with {} rows...".format(len(df)), flush=True)
+        t_start = time()
+        min_expr = (self._mad_multiplier * median_abs_dev_from_zero)
+        print("Minimal peak expression based on mean over RIP/CLIP "
+              "libraries:" "{} (MAD from zero: {})".format(
+                  min_expr, median_abs_dev_from_zero), flush=True)
+        df = df.loc[df.loc[:, self._exp_lib_list].mean(axis=1) >= min_expr, :]
+        t_end = time()
+        print("Removal took {} seconds. DataFrame contains now {} rows.".
+              format((t_end-t_start), len(df)), flush=True)
+        if df.empty:
+            return df
+        # minimum fold change
+        print("Removing windows based on minimum fold change from DataFrame "
+              "with {} rows...".format(len(df)), flush=True)
+        t_start = time()
+        df = df.query('fold_change >= @self._fc_cutoff')
         t_end = time()
         print("Removal took {} seconds. DataFrame contains now {} rows.".
               format((t_end-t_start), len(df)), flush=True)
