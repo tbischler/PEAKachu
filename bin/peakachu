@@ -39,9 +39,11 @@ def main():
     window_parser.add_argument('-p', "--max_proc", type=int, default=1)
     window_parser.add_argument('-w', "--window_size", type=int, default=25)
     window_parser.add_argument('-l', "--step_size", type=int, default=5)
+    window_parser.add_argument('-d', "--stat_test", default="gtest",
+                               choices=["gtest", "deseq"])
     window_parser.add_argument(
         '-n', "--norm_method", default="tmm",
-        choices=["tmm", "count", "manual", "none"])
+        choices=["tmm", "deseq", "count", "manual", "none"])
     window_parser.add_argument(
         '-s', "--size_factors", type=float, nargs='*',
         help="Normalization factors for libraries in input order (first "

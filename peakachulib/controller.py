@@ -47,6 +47,7 @@ class Controller(object):
                 self._args.step_size,
                 replicons.replicon_dict,
                 self._args.max_proc,
+                self._args.stat_test,
                 self._args.norm_method,
                 size_factors,
                 self._args.het_p_val_threshold,
@@ -68,13 +69,21 @@ class Controller(object):
         print("Finished library initialization in {} seconds.\n".format(
             t_end-t_start), flush=True)
         window.generate_window_counts()
-        # Perform G-test
-        print("** Performing G-test for all windows...", flush=True)
-        t_start = time()
-        self._perform_g_test_window(window, lib_count)
-        t_end = time()
-        print("G-test finished in {} seconds.\n".format(t_end-t_start),
-              flush=True)
+        # Perform statistical test
+        if self._args.stat_test == "gtest":
+            print("** Performing G-test for all windows...", flush=True)
+            t_start = time()
+            self._perform_g_test_window(window, lib_count)
+            t_end = time()
+            print("G-test finished in {} seconds.\n".format(t_end-t_start),
+                  flush=True)
+        elif self._args.stat_test == "deseq":
+            print("** Running DESeq2 for all windows...", flush=True)
+            t_start = time()
+            self._run_deseq2_window(window)
+            t_end = time()
+            print("DESeq2 finished in {} seconds.\n".format(t_end-t_start),
+                  flush=True)
         # Merge windows into peaks
         print("** Merging windows to peaks and recalculating values...",
               flush=True)
@@ -252,8 +261,8 @@ class Controller(object):
                 t_end-t_start), flush=True)
         # If no controls are available return initial peaks based on MAD cutoff
         else:
-            print("** Calculating peaks without control based on MAD cutoff...",
-                  flush=True)
+            print("** Calculating peaks without control based on MAD "
+                  "cutoff...", flush=True)
             t_start = time()
             adaptive.run_analysis_without_control(size_factors)
             t_end = time()
@@ -261,6 +270,7 @@ class Controller(object):
                 t_end-t_start), flush=True)
 
     def _perform_g_test_window(self, window, lib_count):
+        print("Testing differential expression via G-test")
         if lib_count > 2:
             print("* Running in replicate-mode...", flush=True)
             if self._args.pairwise_replicates:
@@ -274,3 +284,14 @@ class Controller(object):
         else:
             print("* Running in without-replicate-mode...", flush=True)
             window.perform_g_test_without_repl_for_windows()
+
+    def _run_deseq2_window(self, window):
+        print("Testing differential expression via DESeq2")
+        if self._args.pairwise_replicates:
+            print("  Experiment and control libraries are treated as pairs"
+                  " according to input order.")
+        else:
+            print("  All combinations of experiment and control library "
+                  "pairs that include all libraries are tested and the "
+                  "result with lowest significance is selected.")
+        window.run_deseq2_for_windows()

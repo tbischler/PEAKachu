@@ -8,7 +8,7 @@ import pandas as pd
 import json
 from concurrent import futures
 from peakachulib.library import Library
-from peakachulib.deseq2 import RunDESeq2
+from peakachulib.deseq2 import DESeq2Runner
 from peakachulib.intersection import Intersecter, Interval
 from time import time
 from collections import OrderedDict
@@ -277,10 +277,10 @@ class AdaptiveApproach(object):
     def run_deseq2_analysis(self, size_factors, pairwise_replicates):
         count_df = self._peak_df.loc[:, self._exp_lib_list +
                                      self._ctr_lib_list]
-        run_deseq2 = RunDESeq2(
-            count_df, self._exp_lib_list, self._ctr_lib_list, size_factors,
+        deseq2_runner = DESeq2Runner(count_df)
+        result_df, self._size_factors = deseq2_runner.run_deseq2(
+            self._exp_lib_list, self._ctr_lib_list, size_factors,
             pairwise_replicates)
-        result_df, self._size_factors = run_deseq2.run_deseq2()
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
             self._lib_names_list].div(self._size_factors, axis='columns')
