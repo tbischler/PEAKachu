@@ -200,6 +200,8 @@ class AdaptiveApproach(object):
                                                 peak_df, min_cluster_expr_frac,
                                                 min_block_overlap,
                                                 min_max_block_expr_frac)
+        if peak_df.empty:
+            return
         peak_df = peak_df.astype(np.int64)
         peak_df["peak_strand"] = cluster_strand
         self._replicon_dict[cluster_replicon]["peak_df"] = self._replicon_dict[
@@ -318,7 +320,13 @@ class AdaptiveApproach(object):
         self._peak_df = sig_peak_df
 
     def run_analysis_without_replicates(self, size_factors):
-        self._size_factors = size_factors
+        # check if size factors were defined and otherwise calculate them based
+        # on DESeq normalization
+        if size_factors is None:
+            deseq2_runner = DESeq2Runner(self._peak_df[self._lib_names_list])
+            self._size_factors = deseq2_runner.calc_size_factors()
+        else:
+            self._size_factors = size_factors
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
             self._lib_names_list].div(self._size_factors, axis='columns')
@@ -357,7 +365,13 @@ class AdaptiveApproach(object):
         self._peak_df = sig_peak_df
 
     def run_analysis_without_control(self, size_factors):
-        self._size_factors = size_factors
+        # check if size factors were defined and otherwise calculate them based
+        # on DESeq normalization
+        if size_factors is None:
+            deseq2_runner = DESeq2Runner(self._peak_df[self._lib_names_list])
+            self._size_factors = deseq2_runner.calc_size_factors()
+        else:
+            self._size_factors = size_factors
         # normalize counts
         self._peak_df[self._lib_names_list] = self._peak_df[
             self._lib_names_list].div(self._size_factors, axis='columns')
