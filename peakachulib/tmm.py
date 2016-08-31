@@ -9,12 +9,12 @@ class TMM(object):
     def __init__(self, count_df):
         r("suppressMessages(library(edgeR))")
         self.count_df = count_df
-        
-    def calc_size_factors(self, method="TMM"):
+
+    def calc_size_factors(self):
         # Convert pandas dataframe to R dataframe
         r_dge = r.DGEList(self.count_df)
         # Calculate normalization factors
-        r_dge = r.calcNormFactors(r_dge, method=method)
+        r_dge = r.calcNormFactors(r_dge, method="TMM")
         size_factors = (np.array(r_dge.rx2('samples').rx2("lib.size")) *
                         np.array(r_dge.rx2("samples").rx2("norm.factors")))
         # convert to pandas series
