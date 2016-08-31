@@ -8,7 +8,7 @@ class ReadCounter(object):
     def __init__(self, paired_end, max_insert_size, bam_file):
         self._paired_end = paired_end
         self._max_insert_size = max_insert_size
-        self._bam_fh = pysam.Samfile(bam_file, "rb")
+        self._bam_fh = pysam.AlignmentFile(bam_file, "rb")
 
     def count_reads_for_windows(self, replicon, strand, window_list):
         self._interval_tree = Intersecter()

@@ -9,7 +9,7 @@ class BamToBed(object):
         self._max_insert_size = max_insert_size
 
     def generate_bed_format(self, bam_file):
-        self._bam_fh = pysam.Samfile(bam_file, "rb")
+        self._bam_fh = pysam.AlignmentFile(bam_file, "rb")
         for replicon in self._bam_fh.references:
             self._bed_read_dict = defaultdict(int)
             if self._paired_end:
@@ -28,8 +28,8 @@ class BamToBed(object):
     def _add_single_end_read(self, aligned_read):
         # Note: No translation from SAMParser coordinates to python
         # list coorindates is needed.
-        start = aligned_read.pos
-        end = aligned_read.aend
+        start = aligned_read.reference_start
+        end = aligned_read.reference_end
         if aligned_read.is_reverse:
             self._bed_read_dict["{0},{1},{2}".format(start, end, '-')] += 1
         else:
