@@ -490,13 +490,18 @@ class AdaptiveApproach(object):
                          "peak_end",
                          "peak_strand"] +
                         [lib_name for lib_name in self._lib_dict])
-        if self._ctr_lib_list:
+        if len(self._exp_lib_list) > 1 and len(self._ctr_lib_list) > 1:
             peak_columns += ["baseMean",
                              "log2FoldChange",
                              "lfcSE",
                              "stat",
                              "pvalue",
                              "padj"]
+        elif self._ctr_lib_list:
+            peak_columns += ["base_means",
+                             "fold_change"]
+        else:
+            peak_columns += ["base_means"]
         feature_columns = ["feature_type",
                            "feature_start",
                            "feature_end",
