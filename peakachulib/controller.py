@@ -1,5 +1,6 @@
 import sys
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from peakachulib.replicons import Replicons
 from peakachulib.window import WindowApproach
@@ -8,7 +9,6 @@ from peakachulib.coverage import generate_normalized_wiggle_files
 from peakachulib.consensus_peak import ConsensusPeakGenerator
 from time import time
 
-matplotlib.use('Agg')
 plt.style.use('seaborn-colorblind')
 font = {'family': 'sans-serif', 'size': 7}
 matplotlib.rc('font', **font)
