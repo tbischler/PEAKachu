@@ -1,7 +1,7 @@
 
 import pandas as pd
 import numpy as np
-from scipy.stats import chisqprob
+from scipy.stats import chi2
 
 
 class GTest(object):
@@ -20,7 +20,7 @@ class GTest(object):
         return obs * np.log(obs/exp) if obs > 0.1 else 0
 
     def _g_to_p_value(self, g_value, dof):
-        return chisqprob(g_value, dof)
+        return chi2.sf(g_value, dof)
 
     def _gtest(self, values):
         ctr_obs = values[0]
