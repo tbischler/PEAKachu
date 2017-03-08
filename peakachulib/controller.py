@@ -291,7 +291,6 @@ class Controller(object):
             print("  Experiment and control libraries are treated as pairs"
                   " according to input order.")
         else:
-            print("  All combinations of experiment and control library "
-                  "pairs that include all libraries are tested and the "
-                  "result with lowest significance is selected.")
+            print("  No consideration of sample effects between experiment "
+                  "and control libraries.")
         window.run_deseq2_for_windows()
