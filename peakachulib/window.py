@@ -429,6 +429,7 @@ class WindowApproach(object):
         if not exists(plot_folder):
             makedirs(plot_folder)
         # MA plot
+        plt.switch_backend('Agg')
         plt.plot(np.log10(unsig_base_means),
                  np.log2(unsig_fcs), ".",
                  markersize=2.0, alpha=0.3)
