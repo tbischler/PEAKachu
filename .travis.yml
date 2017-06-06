@@ -34,5 +34,5 @@ install:
 
 script:
   - 'peakachu 2>&1 | grep "^usage" > /dev/null'
-  - time peakachu adaptive -t exp_a.bam exp_b.bam -c ctrl_a.bam -c ctrl_a.bam ctrl_b.bam --output_folder testadaptive
-  - time peakachu window -t exp_a.bam exp_b.bam -c ctrl_a.bam -c ctrl_a.bam ctrl_b.bam --output_folder testwindow
+  - time peakachu adaptive -t tests/exp_a.bam tests/exp_b.bam -c tests/ctrl_a.bam -c tests/ctrl_a.bam tests/ctrl_b.bam --output_folder testadaptive
+  - time peakachu window -t tests/exp_a.bam tests/exp_b.bam -c tests/ctrl_a.bam -c tests/ctrl_a.bam tests/ctrl_b.bam --output_folder testwindow
