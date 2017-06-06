@@ -24,7 +24,7 @@ install:
   - conda config --add channels r
   - conda config --add channels bioconda
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION "r >=3.3" gcc setuptools biopython matplotlib pandas pysam numexpr bcbiogff statsmodels rpy2 bioconductor-deseq2 bioconductor-edger blockbuster
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION "r-base >=3.3" gcc setuptools biopython matplotlib pandas pysam numexpr bcbiogff statsmodels rpy2 bioconductor-deseq2 bioconductor-edger blockbuster
   - source activate test-environment
   - python setup.py install
 
