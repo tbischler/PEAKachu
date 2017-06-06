@@ -24,9 +24,12 @@ install:
   - conda config --add channels r
   - conda config --add channels bioconda
 
-  # solving package specifications takes awfully long
-  - travis_wait 40 conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION gcc setuptools biopython matplotlib pandas pysam numexpr bcbiogff statsmodels rpy2 bioconductor-deseq2 bioconductor-edger blockbuster
+  # solving package specifications for the full list is broken
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION gcc setuptools biopython matplotlib pandas pysam numexpr bcbiogff statsmodels rpy2 blockbuster
   - source activate test-environment
+  # separate installation of bioconductor packages
+  - conda install -q bioconductor-deseq2
+  - conda install -q bioconductor-edger
   - python setup.py install
 
 script:
