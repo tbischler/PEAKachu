@@ -7,7 +7,7 @@ from peakachulib.controller import Controller
 from peakachulib.float_range import frac_float
 
 __author__ = "Thorsten Bischler"
-__copyright__ = ("2016 by Thorsten Bischler"
+__copyright__ = ("2017 by Thorsten Bischler"
                  " <thorsten.bischler@uni-wuerzburg.de>")
 __license__ = "ISC license"
 __email__ = "thorsten.bischler@uni-wuerzburg.de"
