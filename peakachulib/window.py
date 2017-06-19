@@ -646,9 +646,12 @@ class WindowApproach(object):
         return df
 
     def _run_deseq2_peaks(self):
-        peak_df = pd.concat(
-            [self._replicon_dict[replicon]["peak_df"] for replicon in
-                sorted(self._replicon_dict)], axis=0, ignore_index=True)
+        peak_df = pd.DataFrame()
+        for replicon in sorted(self._replicon_dict):
+            if self._replicon_dict[replicon]["peak_df"].empty:
+                continue
+            peak_df = peak_df.append(self._replicon_dict[replicon]["peak_df"],
+                                     ignore_index=True)
         count_df = peak_df.loc[:, self._exp_lib_list + self._ctr_lib_list]
         deseq2_runner = DESeq2Runner(count_df)
         result_df, self._size_factors = deseq2_runner.run_deseq2(
