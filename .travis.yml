@@ -1,0 +1,34 @@
+language: python
+python:
+  - "3.5"
+sudo: false
+install:
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # setup bioconda
+  - conda config --add channels conda-forge
+  - conda config --add channels defaults
+  - conda config --add channels r
+  - conda config --add channels bioconda
+
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION gcc setuptools biopython matplotlib pandas pysam numexpr bcbiogff statsmodels rpy2 bioconductor-deseq2 bioconductor-edger blockbuster
+  - source activate test-environment
+  - python setup.py install
+
+script:
+  - 'peakachu 2>&1 | grep "^usage" > /dev/null'
+  - time peakachu adaptive -t tests/exp_a.bam tests/exp_b.bam -c tests/ctrl_a.bam -c tests/ctrl_a.bam tests/ctrl_b.bam --output_folder testadaptive
+  - time peakachu window -t tests/exp_a.bam tests/exp_b.bam -c tests/ctrl_a.bam -c tests/ctrl_a.bam tests/ctrl_b.bam --output_folder testwindow
