@@ -132,7 +132,7 @@ class Controller(object):
         # Run blockbuster
         print("** Running blockbuster...", flush=True)
         t_start = time()
-        adaptive.run_blockbuster()
+        adaptive.run_blockbuster(self._args.blockbuster_path)
         t_end = time()
         print("blockbuster finished in {} seconds.\n".format(t_end-t_start),
               flush=True)

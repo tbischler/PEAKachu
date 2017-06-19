@@ -119,11 +119,12 @@ class AdaptiveApproach(object):
         print("Reads converted to bed format in {} seconds.\n".format(
             t_end-t_start), flush=True)
 
-    def run_blockbuster(self):
+    def run_blockbuster(self, blockbuster_path):
         self._blockbuster_output = ""
         for replicon in sorted(self._replicon_dict):
             self._replicon_dict[replicon][
-                "blockbuster"] = self._blockbuster_worker(replicon)
+                "blockbuster"] = self._blockbuster_worker(blockbuster_path,
+                                                          replicon)
             print("blockbuster for replicon {} exited with status {}".format(
                 replicon, self._replicon_dict[replicon]["blockbuster"][
                     "returncode"]))
@@ -138,7 +139,7 @@ class AdaptiveApproach(object):
                   'w') as blockbuster_fh:
             blockbuster_fh.write(self._blockbuster_output)
 
-    def _blockbuster_worker(self, replicon):
+    def _blockbuster_worker(self, blockbuster_path, replicon):
         p = Popen(
             ["blockbuster.x", "-minBlockHeight", "10", "-print", "1",
              "-distance", "1",

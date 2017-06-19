@@ -76,10 +76,12 @@ def main():
                                         default=50)
     adaptive_parser.add_argument('-g', "--gff_folder")
     adaptive_parser.add_argument("--features", nargs='*', default=[])
-    adaptive_parser.add_argument("--sub_features", nargs='*',
-                                        default=[])
-    adaptive_parser.add_argument('-p', "--max_proc", type=int,
-                                        default=1)
+    adaptive_parser.add_argument("--sub_features", nargs='*', default=[])
+    adaptive_parser.add_argument('-p', "--max_proc", type=int, default=1)
+    adaptive_parser.add_argument(
+        '-b', "--blockbuster_path", default="blockbuster.x",
+        help="Location of blockbuster executable. Per default required to be"
+        " on the $PATH.")
     adaptive_parser.add_argument(
         '-C', "--min_cluster_expr_frac", type=frac_float, default=0.01,
         help="Minimum fraction of the blockbuster cluster expression that a "
