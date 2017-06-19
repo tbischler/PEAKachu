@@ -4,7 +4,7 @@ Installation and updating
 Requirements
 ------------
 
-PEAKachu was developed using Python 3.4 and the user is advised to run PEAKachu
+PEAKachu was developed using Python 3.5 and the user is advised to run PEAKachu
 with this or a higher version. The following third party software is required
 to run PEAKachu with all features:
 

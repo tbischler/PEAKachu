@@ -1,6 +1,6 @@
 package:
     name: peakachu
-    version: "0.0.1alpha1"
+    version: "0.1.0"
 
 source:
     path: ../

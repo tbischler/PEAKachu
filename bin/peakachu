@@ -11,7 +11,7 @@ __copyright__ = ("2016 by Thorsten Bischler"
                  " <thorsten.bischler@uni-wuerzburg.de>")
 __license__ = "ISC license"
 __email__ = "thorsten.bischler@uni-wuerzburg.de"
-__version__ = "0.1dev"
+__version__ = "0.1.0"
 
 
 def main():
