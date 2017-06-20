@@ -7,7 +7,7 @@ Installation
 
     $ make readme_rst
     $ make package
-    $ pip3 install --user dist/PEAKachu-0.1.dev0.tar.gz
+    $ pip3 install --user dist/PEAKachu-0.1.0.tar.gz
 
 License
 -------

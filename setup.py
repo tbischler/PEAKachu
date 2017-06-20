@@ -6,7 +6,7 @@ from distutils.extension import Extension
 
 setup(
     name='PEAKachu',
-    version='0.1dev',
+    version='0.1.0',
     packages=['peakachulib'],
     author='Thorsten Bischler',
     author_email='thorsten.bischler@uni-wuerzburg.de',
