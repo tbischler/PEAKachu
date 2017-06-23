@@ -13,14 +13,14 @@ setup(
     description='Peak calling tool for CLIP-seq data',
     url='',
     install_requires=[
-        "biopython >= 1.66",
-        "matplotlib >= 1.5.1",
-        "pandas >= 0.17.1",
-        "pysam >= 0.9.0",
-        "bcbio-gff >= 0.6.2",
-        "statsmodels >= 0.6.1",
-        "numexpr >= 2.5",
-        "rpy2 >= 2.7.6"
+        "biopython >= 1.69",
+        "matplotlib >= 2.0.2",
+        "pandas >= 0.20.2",
+        "pysam >= 0.11.2.2",
+        "bcbio-gff >= 0.6.4",
+        "statsmodels >= 0.8.0",
+        "numexpr >= 2.6.2",
+        "rpy2 >= 2.8.5"
     ],
     scripts=['bin/peakachu'],
     license='ISC License (ISCL)',

@@ -52,21 +52,17 @@ test:
 	python3 setup.py build_ext --inplace
 	python3 tests/run_all_tests.py
 
-# coverage:
-# 	python3-coverage run tests/test_all.py
-# 	python3-coverage report
-
-# package_to_pypi:
-# 	python3 setup.py sdist upload
-# 	@echo "Go to https://pypi.python.org/pypi/PEAKachu/"
+package_to_pypi:
+	python3 setup.py sdist upload
+	@echo "Go to https://pypi.python.org/pypi/PEAKachu/"
 
 html_doc:
 	cd docs && make html && cd ..
 
-# upload_doc:
-# 	cd docs/build/html/ && zip -r PEAKachu_docs.zip * && cd ../../.. && mv docs/build/html/PEAKachu_docs.zip .
-# 	@echo ""
-# 	@echo "Upload PEAKachu_docs.zip at https://pypi.python.org/pypi?%3Aaction=pkg_edit&name=PEAKachu"
+upload_doc:
+	cd docs/build/html/ && zip -r PEAKachu_docs.zip * && cd ../../.. && mv docs/build/html/PEAKachu_docs.zip .
+	@echo ""
+	@echo "Upload PEAKachu_docs.zip at https://pypi.python.org/pypi?%3Aaction=pkg_edit&name=PEAKachu"
 
-# show_html_docs:
-# 	firefox docs/build/html/index.html &
+show_html_docs:
+	firefox docs/build/html/index.html &
