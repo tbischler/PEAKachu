@@ -517,7 +517,8 @@ class WindowApproach(object):
                 peak_df_reverse["peak_strand"] = '-'
             # combined
             self._replicon_dict[replicon]["peak_df"] = pd.concat([
-                peak_df_forward, peak_df_reverse], axis=0, ignore_index=True)
+                peak_df_forward, peak_df_reverse], axis=0, ignore_index=True,
+                sort=False)
         del self._window_df
         self._generate_peak_counts()
         for replicon in sorted(self._replicon_dict):
@@ -567,9 +568,7 @@ class WindowApproach(object):
         # append peak if last window in data frame was significant
         if peak["peak_start"] is not None:
             peak_list.append(deepcopy(peak))
-        peak_df = pd.DataFrame(peak_list)
-        if peak_df.shape[0] > 1:
-            peak_df = peak_df.loc[:, ["peak_start", "peak_end"]]
+        peak_df = pd.DataFrame(peak_list, columns=["peak_start", "peak_end"])
         return peak_df
 
     def _generate_peak_counts(self):
