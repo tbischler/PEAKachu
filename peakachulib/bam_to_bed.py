@@ -47,7 +47,8 @@ class BamToBed(object):
         if not (aligned_read.reference_id == aligned_read.next_reference_id):
             return
         try:
-            mate = self._read2_dict[aligned_read.query_name.split()[0]]
+            mate = self._read2_dict[aligned_read.query_name.split()[0]][
+                aligned_read.next_reference_start]
         except KeyError:
             # Invalid mate (usually post-filtered)
             print("Mate not found for read {}".format(aligned_read))
@@ -72,7 +73,7 @@ class BamToBed(object):
             self._bed_read_dict["{0},{1},{2}".format(start, end, '+')] += 1
 
     def _cache_read2(self, replicon):
-        self._read2_dict = {}
+        self._read2_dict = defaultdict(dict)
         for aligned_read in self._bam_fh.fetch(replicon):
             if not aligned_read.is_read2:
                 continue
@@ -80,5 +81,6 @@ class BamToBed(object):
                 continue
             if aligned_read.mate_is_unmapped:
                 continue
-            self._read2_dict[aligned_read.query_name.split()[0]] = aligned_read
+            self._read2_dict[aligned_read.query_name.split()[0]][
+                aligned_read.reference_start] = aligned_read
         self._bam_fh.seek(0)

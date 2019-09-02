@@ -5,6 +5,7 @@ from os.path import exists
 from concurrent import futures
 from time import time
 import json
+from collections import defaultdict
 from peakachulib.wiggle import WiggleWriter
 
 
@@ -58,7 +59,8 @@ class Coverage(object):
         if not (aligned_read.reference_id == aligned_read.next_reference_id):
             return
         try:
-            mate = self._read2_dict[aligned_read.query_name.split()[0]]
+            mate = self._read2_dict[aligned_read.query_name.split()[0]][
+                aligned_read.next_reference_start]
         except KeyError:
             # Invalid mate (usually post-filtered)
             print("Mate not found for read {}".format(aligned_read))
@@ -83,7 +85,7 @@ class Coverage(object):
             self._coverages["+"][start:end] += 1.0
 
     def _cache_read2(self, replicon, bam_fh):
-        self._read2_dict = {}
+        self._read2_dict = defaultdict(dict)
         for aligned_read in bam_fh.fetch(replicon):
             if not aligned_read.is_read2:
                 continue
@@ -91,7 +93,8 @@ class Coverage(object):
                 continue
             if aligned_read.mate_is_unmapped:
                 continue
-            self._read2_dict[aligned_read.query_name.split()[0]] = aligned_read
+            self._read2_dict[aligned_read.query_name.split()[0]][
+                aligned_read.reference_start] = aligned_read
         bam_fh.seek(0)
 
 
