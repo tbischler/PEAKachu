@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from rpy2 import robjects
 from rpy2.robjects import r, Formula, pandas2ri
+from rpy2.robjects.conversion import localconverter
 pandas2ri.activate()
 
 
@@ -17,8 +18,9 @@ class DESeq2Runner(object):
         self._count_df = self._count_df.astype(int)
         conds = ["exp"] * len(exp_lib_list) + ["ctr"] * len(ctr_lib_list)
         if pairwise_replicates:
-            samples = list(range(1, len(exp_lib_list) + 1)) + list(
-                range(1, len(ctr_lib_list) + 1))
+            samples = [str(sample) for sample in (
+                       list(range(1, len(exp_lib_list) + 1)) +
+                       list(range(1, len(ctr_lib_list) + 1)))]
             colData = robjects.DataFrame({
                     "conditions": robjects.StrVector(conds),
                     "samples": robjects.StrVector(samples)})
@@ -43,7 +45,9 @@ class DESeq2Runner(object):
                                  index=self._count_df.columns)
         results = r.results(dds, contrast=robjects.StrVector(
             ("conditions", "exp", "ctr")), altHypothesis="greater")
-        results_df = pandas2ri.ri2py_dataframe(r['as.data.frame'](results))
+        with localconverter(robjects.default_converter + pandas2ri.converter):
+            results_df = robjects.conversion.rpy2py(
+                r['as.data.frame'](results))
         results_df.index = self._count_df.index
         return(results_df, size_factors)
 
