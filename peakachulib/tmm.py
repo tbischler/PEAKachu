@@ -15,8 +15,8 @@ class TMM(object):
         r_dge = r.DGEList(self.count_df)
         # Calculate normalization factors
         r_dge = r.calcNormFactors(r_dge, method="TMM")
-        size_factors = (np.array(r_dge.rx2('samples').rx2("lib.size")) *
-                        np.array(r_dge.rx2("samples").rx2("norm.factors")))
+        size_factors = (np.array(r_dge.rx2('samples')["lib.size"]) *
+                        np.array(r_dge.rx2("samples")["norm.factors"]))
         # convert to pandas series
         size_factors = pd.Series(size_factors, index=self.count_df.columns)
         # adjust size factors so that the maximum is 1.0
