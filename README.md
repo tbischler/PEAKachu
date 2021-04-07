@@ -13,7 +13,7 @@ Alternativaly, PEAKachu can be installed from source
 
     $ make readme_rst
     $ make package
-    $ pip3 install --user dist/PEAKachu-0.1.0.tar.gz
+    $ pip3 install --user dist/PEAKachu-0.2.0.tar.gz
 
 ## License
 

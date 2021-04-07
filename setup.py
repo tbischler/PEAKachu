@@ -6,17 +6,17 @@ from distutils.extension import Extension
 
 setup(
     name='PEAKachu',
-    version='0.1.0',
+    version='0.2.0',
     packages=['peakachulib'],
     author='Thorsten Bischler',
     author_email='thorsten.bischler@uni-wuerzburg.de',
     description='Peak calling tool for CLIP-seq data',
     url='',
     install_requires=[
-        "biopython >= 1.74",
-        "matplotlib >= 3.1.1",
+        "biopython >= 1.77",
+        "matplotlib >= 3.3.1",
         "pandas >= 0.25.1",
-        "pysam >= 0.15.3",
+        "pysam >= 0.16.0.1",
         "bcbio-gff >= 0.6.6",
         "statsmodels >= 0.10.1",
         "numexpr >= 2.7.0",

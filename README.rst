@@ -3,11 +3,20 @@ Peak calling tool for CLIP-seq data
 Installation
 ------------
 
+PEAKachu is available via `bioconda <https://bioconda.github.io/>`__ and
+can be installed using
+
 ::
 
-    $ make readme_rst
-    $ make package
-    $ pip3 install --user dist/PEAKachu-0.1.0.tar.gz
+   conda create -n peakachu peakachu python=3
+
+Alternativaly, PEAKachu can be installed from source
+
+::
+
+   $ make readme_rst
+   $ make package
+   $ pip3 install --user dist/PEAKachu-0.2.0.tar.gz
 
 License
 -------

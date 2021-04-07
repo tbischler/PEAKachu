@@ -7,11 +7,11 @@ from peakachulib.controller import Controller
 from peakachulib.float_range import frac_float
 
 __author__ = "Thorsten Bischler"
-__copyright__ = ("2017 by Thorsten Bischler"
+__copyright__ = ("2017-2021 by Thorsten Bischler"
                  " <thorsten.bischler@uni-wuerzburg.de>")
 __license__ = "ISC license"
 __email__ = "thorsten.bischler@uni-wuerzburg.de"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def main():
@@ -69,11 +69,11 @@ def main():
     adaptive_parser.add_argument('-t', "--exp_libs", nargs='+', required=True)
     adaptive_parser.add_argument('-c', "--ctr_libs", nargs='*', default=[])
     adaptive_parser.add_argument('-r', "--pairwise_replicates",
-                                        action='store_true', default=False)
+                                 action='store_true', default=False)
     adaptive_parser.add_argument('-P', "--paired_end",
-                                        action='store_true', default=False)
+                                 action='store_true', default=False)
     adaptive_parser.add_argument('-M', "--max_insert_size", type=int,
-                                        default=50)
+                                 default=50)
     adaptive_parser.add_argument('-g', "--gff_folder")
     adaptive_parser.add_argument("--features", nargs='*', default=[])
     adaptive_parser.add_argument("--sub_features", nargs='*', default=[])
@@ -134,7 +134,7 @@ def main():
     except IOError as msg:
         parser.error(str(msg))
     if args.version is True:
-                print("PEAKachu version " + __version__)
+        print("PEAKachu version " + __version__)
     elif "func" in dir(args):
         controller = Controller(args)
         args.func(controller)
@@ -156,6 +156,7 @@ def coverage(controller):
 
 def consensus_peak(controller):
     controller.consensus_peak()
+
 
 if __name__ == "__main__":
     sys.exit(main())
