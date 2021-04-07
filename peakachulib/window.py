@@ -651,6 +651,9 @@ class WindowApproach(object):
                 continue
             peak_df = peak_df.append(self._replicon_dict[replicon]["peak_df"],
                                      ignore_index=True)
+        if peak_df.empty:
+            print("**No peaks detected**", flush=True)
+            return
         count_df = peak_df.loc[:, self._exp_lib_list + self._ctr_lib_list]
         deseq2_runner = DESeq2Runner(count_df)
         result_df, self._size_factors = deseq2_runner.run_deseq2(
