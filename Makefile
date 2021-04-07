@@ -21,8 +21,8 @@ pylint:
 
 new_release:
 	@echo "* Create/checkout a release branch"
-	@echo "  git branch release_v0.1.X"
-	@echo "  git checkout release_v0.1.X"
+	@echo "  git branch release_v0.2.X"
+	@echo "  git checkout release_v0.2.X"
 	@echo "* Change bin/peakachu"
 	@echo "* Change setup.py"
 	@echo "* Change docs/source/conf.py"
@@ -32,8 +32,8 @@ new_release:
 	@echo "* Test doc creation"
 	@echo "* make package_to_pypi"
 	@echo "* git add CHANGELOG.txt bin/peakachu docs/source/conf.py setup.py"
-	@echo "* Commit changes e.g. 'git commit -m \"Set version to 0.1.X\"'"
-	@echo "* Tag the commit e.g. 'git tag -a v0.1.X -m \"version v0.1.X\"'"
+	@echo "* Commit changes e.g. 'git commit -m \"Set version to 0.2.X\"'"
+	@echo "* Tag the commit e.g. 'git tag -a v0.1.X -m \"version v0.2.X\"'"
 	@echo "* Merge release into dev and master"
 	@echo "* Push it to github: git push"
 	@echo "* Generate a new release based on this tag at"

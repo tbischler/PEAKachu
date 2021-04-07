@@ -1,2 +1,6 @@
+v0.2.0 (2021-04-07)
+- Adjust code to support more recent dependency versions (especially rpy2)
+- Solve issue with localization of multimapping paired-end reads
+- Minor code fixes
 v0.1.0 (2017-06-23)
 - First official version
